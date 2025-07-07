@@ -1,0 +1,8 @@
+# Compiled class files
+*.class
+
+# VS Code settings
+.vscode/
+
+# Mac junk files
+.DS_Store
