@@ -18,3 +18,9 @@ A simple command-line Java application that calculates the distance between two 
 1. Make sure Java is installed:
    ```bash
    java -version
+2. Next run from the src folder:
+   ```bash
+   javac Main.java
+3. Then run:
+   ```bash
+   java Main
