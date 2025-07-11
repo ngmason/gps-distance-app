@@ -10,6 +10,7 @@ A simple command-line Java application that calculates the distance between two 
 - Calculates the great-circle distance between them (as-the-crow-flies)
 - Displays results in both kilometers and miles
 - Modular and expandable design for future GUI or API integration
+- Looping functionality to calculate multiple distances without restarting the app
 
 ---
 
