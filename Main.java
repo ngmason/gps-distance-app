@@ -42,6 +42,11 @@ public class Main {
         System.out.println("\n\nThanks for using the GPS distance calculator! Goodbye!\n\n");
     }
 
+    /**
+     * Parses coordinates in the form (lat, long) into an array of doubles.
+     * @param coordinate, The coordinate value in the form (lat, long)
+     * @return double[], An array of double, the first slot containing latitude and the second slot containing longitude
+     */
     static double[] parseCoordinate (String coordinate) {
         double [] latAndLong = {0,0};
         if (coordinate.contains(",") && coordinate.contains("(") && coordinate.contains(")")) {
