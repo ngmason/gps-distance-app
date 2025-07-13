@@ -1,34 +1,55 @@
 import java.util.Scanner;
 
+/**
+ * Main program to run gps distance app.
+ * @author Nina Mason
+ * @version 7/12/2025
+ */
+
 public class Main {
 
     final static double R = 6371.0;
 
     public static void main(String args[]) {
-        double [] coordinate1 = {0,0};
-        double [] coordinate2 = {0,0};
+        Location coordinate1 = new Location("", 0, 0);
+        Location coordinate2 = new Location("", 0, 0);
         double distMiles = 0.0;
         double distKm = 0.0;
+        String name1 = "";
+        String name2 = "";
         String input = "";
         String continueAns = "";
         Scanner in = new Scanner(System.in);
 
         System.out.println("\n\n---------Welcome to the GPS Distance Calculator---------");
         do {
-            System.out.println("\nPlease enter coordinate 1 as (lat, long): ");
-            input = in.nextLine();
-            coordinate1 = parseCoordinate(input);
+            System.out.println("\nPlease enter the name of the location 1: ");
+            name1 = in.nextLine();
 
-            System.out.println("\nPlease enter coordinate 2 as (lat, long): ");
-            input = in.nextLine();
-            coordinate2 = parseCoordinate(input);
+            do {
+                System.out.println("\nPlease enter coordinate 1 as (lat, long): ");
+                input = in.nextLine();
+                coordinate1 = parseCoordinate(input, name1);
+            } while (coordinate1.getLatitude() == 0 && coordinate1.getLongitude() == 0);
+
+            System.out.println("\nPlease enter the name of the location 2: ");
+            name2 = in.nextLine();
+
+            do {
+                System.out.println("\nPlease enter coordinate 2 as (lat, long): ");
+                input = in.nextLine();
+                coordinate2 = parseCoordinate(input, name2);
+            } while (coordinate2.getLatitude() == 0 &&  coordinate2.getLongitude() == 0);
             
-            double[] distances = haversine(coordinate1[0], coordinate1[1], coordinate2[0], coordinate2[1]);
+            double[] distances = haversine(coordinate1.getLatitude(), 
+                                            coordinate1.getLongitude(), 
+                                            coordinate2.getLatitude(), 
+                                            coordinate2.getLongitude());
             distKm = distances[0];
             distMiles = distances[1];
 
-            System.out.println("\nLatitude 1 is " + coordinate1[0] + " and longitude 1 is " + coordinate1[1]);
-            System.out.println("\nLatitude 2 is " + coordinate2[0] + " and longitude 2 is " + coordinate2[1]);
+            System.out.println("\nLocation " + coordinate1.getName() + " has latitude " + coordinate1.getLatitude() + " and longitude " + coordinate1.getLongitude());
+            System.out.println("\nLocation " + coordinate2.getName() + " has latitude " + coordinate2.getLatitude() + " and longitude " + coordinate2.getLongitude());
             System.out.printf("\n\nDistance in miles is %.2f and distance in kilometers is %.2f.\n", distMiles, distKm);
             System.out.println("\nWould you like to calculate another distance? (y/n)");
             continueAns = in.nextLine();
@@ -36,14 +57,16 @@ public class Main {
         } while (continueAns.equalsIgnoreCase("y"));
 
         System.out.println("\n\nThanks for using the GPS distance calculator! Goodbye!\n\n");
+        in.close();
     }
 
     /**
-     * Parses coordinates in the form (lat, long) into an array of doubles.
+     * Parses coordinates in the form (lat, long) into a Location object.
      * @param coordinate, The coordinate value in the form (lat, long)
-     * @return double[], An array of double, the first slot containing latitude and the second slot containing longitude
+     * @param name, The name of the coordinate location
+     * @return Location, A new location object with a coordinate and a name
      */
-    static double[] parseCoordinate (String coordinate) {
+    static Location parseCoordinate (String coordinate, String name) {
         double [] latAndLong = {0,0};
         if (coordinate.contains(",") && coordinate.contains("(") && coordinate.contains(")")) {
             try {
@@ -51,16 +74,16 @@ public class Main {
                 String[] pair = coordinate.split(",");
                 latAndLong[0] = Double.parseDouble(pair[0]);
                 latAndLong[1] = Double.parseDouble(pair[1]);
-                return latAndLong;
+                return new Location(name, latAndLong[0], latAndLong[1]);
                 
             } catch (NumberFormatException e) {
                 System.err.println("Error: Number formatting exception was caught! Please check coordinate input and make sure it is in the form: (lat, long)");
-                return latAndLong;
+                return new Location("", 0, 0);
             }
             
         } else {
-            System.out.println("Opps! Invalid input. Make sure to input the coordinates as (lat, long).");
-            return latAndLong;
+            System.out.println("Oops! Invalid input. Make sure to input the coordinates as (lat, long).");
+            return new Location("", 0, 0);
         }
         
 
