@@ -7,10 +7,12 @@ A simple command-line Java application that calculates the distance between two 
 ## 🌟 Features
 
 - Accepts user input for two sets of latitude and longitude
-- Calculates the great-circle distance between them (as-the-crow-flies)
+- Calculates the great-circle distance between them (Haversine formula)
 - Displays results in both kilometers and miles
-- Modular and expandable design for future GUI or API integration
-- Looping functionality to calculate multiple distances without restarting the app
+- Calculates estimated travel time based on user-defined average speed
+- Stores routes with names and outputs a saved list after each calculation
+- Clean, modular design using custom `Location` and `Route` classes
+- Supports multiple calculations per session (loop)
 
 ---
 
@@ -21,7 +23,7 @@ A simple command-line Java application that calculates the distance between two 
    java -version
 2. Next run from the src folder:
    ```bash
-   javac Main.java
+   javac src/Main.java
 3. Then run:
    ```bash
-   java Main
+   java -cp src Main
