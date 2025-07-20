@@ -13,6 +13,14 @@ A simple command-line Java application that calculates the distance between two 
 - Stores routes with names and outputs a saved list after each calculation
 - Clean, modular design using custom `Location` and `Route` classes
 - Supports multiple calculations per session (loop)
+- Saves and loads routes using a `routes.json` file
+
+---
+
+## 📦 Dependencies
+
+- Java 8+
+- [`org.json`](https://github.com/stleary/JSON-java) library (included in `lib/`)
 
 ---
 
@@ -23,7 +31,7 @@ A simple command-line Java application that calculates the distance between two 
    java -version
 2. Next run from the src folder:
    ```bash
-   javac src/Main.java
+   javac -cp ".:lib/json-20231013.jar" *.java
 3. Then run:
    ```bash
-   java -cp src Main
+   java -cp ".:lib/json-20231013.jar" Main
