@@ -1,0 +1,74 @@
+[
+    {
+        "path": [
+            {
+                "latitude": 40.7128,
+                "name": "NYC",
+                "longitude": -74.006
+            },
+            {
+                "latitude": 34.0522,
+                "name": "LA",
+                "longitude": -118.2437
+            }
+        ],
+        "distanceMiles": 2445.5585859730977,
+        "name": "Route 1",
+        "distanceKm": 3935.746254609722,
+        "time": 81.51861953243659
+    },
+    {
+        "path": [
+            {
+                "latitude": 51.5074,
+                "name": "London",
+                "longitude": -0.1278
+            },
+            {
+                "latitude": 48.8566,
+                "name": "Paris",
+                "longitude": 2.3522
+            }
+        ],
+        "distanceMiles": 213.47577277017373,
+        "name": "Route 2",
+        "distanceKm": 343.5560603410422,
+        "time": 7.115859092339124
+    },
+    {
+        "path": [
+            {
+                "latitude": 35.6895,
+                "name": "Tokyo",
+                "longitude": 139.6917
+            },
+            {
+                "latitude": 37.5665,
+                "name": "Seoul",
+                "longitude": 126.978
+            }
+        ],
+        "distanceMiles": 716.2035597497617,
+        "name": "Route 3",
+        "distanceKm": 1152.6182582543468,
+        "time": 23.873451991658722
+    },
+    {
+        "path": [
+            {
+                "latitude": 33.4484,
+                "name": "Phoenix",
+                "longitude": -112.074
+            },
+            {
+                "latitude": 39.7392,
+                "name": "Denver",
+                "longitude": -104.9903
+            }
+        ],
+        "distanceMiles": 585.5405216216662,
+        "name": "Route 4",
+        "distanceKm": 942.3364167649702,
+        "time": 19.518017387388873
+    }
+]

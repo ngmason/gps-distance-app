@@ -24,6 +24,15 @@ public class Route {
         this.name = name;
     }
 
+    public Route(Location start, Location end, double distanceKm, double distanceMiles, double timeHrs, String name) {
+        this.start = start;
+        this.end = end;
+        this.distanceKm = distanceKm;
+        this.distanceMiles = distanceMiles;
+        this.timeHrs = timeHrs;
+        this.name = name;
+    }
+
     public Location getStart() {
         return start;
     }
