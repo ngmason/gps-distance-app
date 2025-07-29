@@ -1,8 +1,11 @@
+package core;
+
 /**
  * Route class to hold information about a gps route.
  * @author Nina Mason
- * @version 7/15/2025
+ * @version 7/25/2025
  */
+
 public class Route {
 
     private Location start;

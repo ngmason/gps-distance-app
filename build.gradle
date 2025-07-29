@@ -1,0 +1,42 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // JSON lib from local directory
+    implementation files('lib/json-20231013.jar')
+}
+
+// Define your Java version
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+def javafxPath = '/Users/ninamason/Downloads/javafx-sdk-21.0.8/lib'
+def javafxModules = 'javafx.controls,javafx.fxml'
+
+// Tell the compiler about JavaFX
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += [
+        '--module-path', javafxPath,
+        '--add-modules', javafxModules
+    ]
+}
+
+application {
+    // Default to GUI main class unless overridden
+    mainClass = project.hasProperty("mainClass") ? project.getProperty("mainClass") : "gui.GpsAppGui"
+}
+
+run {
+    jvmArgs = [
+        '--module-path', javafxPath,
+        '--add-modules', javafxModules
+    ]
+}
