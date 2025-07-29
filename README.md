@@ -39,7 +39,7 @@ A simple yet powerful Java application with both GUI and CLI modes that calculat
    ```bash
    gradle run
 
-   ---
+---
 
 ## 🔧 How to Run CLI
 
