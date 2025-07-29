@@ -6,3 +6,7 @@
 
 # Mac junk files
 .DS_Store
+
+.gradle/
+build/
+saved_routes.json
