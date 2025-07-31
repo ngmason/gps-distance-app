@@ -159,11 +159,19 @@ public class GpsAppGui extends Application {
 
         // Scene
         VBox root = new VBox(15);
-        Label title = new Label("🧭 GPS Distance Calculator");
-        title.setStyle("-fx-font-size: 22px; -fx-text-fill: #4B0082; -fx-font-weight: bold;");
-        title.setAlignment(Pos.CENTER);
+        Image compassImage = new Image(getClass().getResourceAsStream("/compass_icon.png"));
+        ImageView iconView = new ImageView(compassImage);
+        iconView.setFitWidth(32);
+        iconView.setFitHeight(32);
+        iconView.setPreserveRatio(true);
 
-        root.getChildren().addAll(title, tabPane);
+        Label title = new Label("GPS Distance Calculator");
+        title.setStyle("-fx-font-size: 22px; -fx-text-fill: #4B0082; -fx-font-weight: bold;");
+
+        HBox titleBox = new HBox(10, iconView, title);
+        titleBox.setAlignment(Pos.CENTER);
+
+        root.getChildren().addAll(titleBox, tabPane);
         root.setPadding(new Insets(20));
 
         Scene scene = new Scene(root, 600, 500);
