@@ -12,7 +12,7 @@ dependencies {
 }
 
 application {
-    mainClass = 'gui.GpsAppGui'
+    mainClass = 'core.Main'
 }
 
 java {
