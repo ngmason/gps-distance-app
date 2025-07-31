@@ -75,7 +75,22 @@ public class GpsAppGui extends Application {
         // Button
         Button calculateBtn = new Button("Calculate distance");
         calculateBtn.setStyle("-fx-background-color: #00BFFF; -fx-text-fill: black; -fx-font-weight: bold;");
-        Label resultLabel = new Label();
+        
+        // Summary grid
+        Image mapImg = new Image(getClass().getResourceAsStream("/map_icon.png"));
+        ImageView mapIcon = new ImageView(mapImg);
+        mapIcon.setFitHeight(20);
+        mapIcon.setFitWidth(20);
+        mapIcon.setPreserveRatio(true);
+        Label summaryHeader = new Label("Route Summary:");
+        summaryHeader.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        HBox summaryTitleBox = new HBox(10, mapIcon, summaryHeader);
+        summaryTitleBox.setAlignment(Pos.CENTER_LEFT);
+
+        GridPane summaryGrid = new GridPane();
+        summaryGrid.setVgap(10);
+        summaryGrid.setHgap(15);
+        summaryGrid.setPadding(new Insets(10));
 
         calculateBtn.setOnAction(e -> {
             try {
@@ -95,11 +110,23 @@ public class GpsAppGui extends Application {
                 currentRoutes.add(newRoute);
                 RouteLoader.saveRoutes(currentRoutes, SAVE_FILE_PATH);
 
-                resultLabel.setText(newRoute.toString());
+                //resultLabel.setText(newRoute.toString());
+                summaryGrid.getChildren().clear();
+                summaryGrid.add(new Label("Distance (km):"), 0, 0);
+                summaryGrid.add(new Label(String.format("%.2f", newRoute.getDistanceKm())), 1, 0);
+                summaryGrid.add(new Label("Distance (miles):"), 0, 1);
+                summaryGrid.add(new Label(String.format("%.2f", newRoute.getDistanceMiles())), 1, 1);
+                summaryGrid.add(new Label("Travel Time (hrs):"), 0, 2);
+                summaryGrid.add(new Label(String.format("%.2f", newRoute.getTimeHrs())), 1, 2);
 
                 refreshRouteDropdown(routeComboBox);
             } catch (NumberFormatException ex) {
-                resultLabel.setText("⚠️ Please enter valid numbers for all coordinates!");
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Input Error");
+                alert.setHeaderText("Invalid Input");
+                alert.setContentText("⚠️ Please enter valid numbers for all coordinates!");
+
+                alert.showAndWait();
             }
         });
 
@@ -108,8 +135,11 @@ public class GpsAppGui extends Application {
         mapImageView.setFitWidth(300);
         mapImageView.setPreserveRatio(true);
 
-        newRouteLayout.getChildren().addAll(coordinatesGrid, nameLabel,  nameField, speedLabel, speedDropdown, calculateBtn, mapImageView, resultLabel);
-        newRouteTab.setContent(newRouteLayout);
+        newRouteLayout.getChildren().addAll(coordinatesGrid, nameLabel,  nameField, speedLabel, speedDropdown, calculateBtn, mapImageView, summaryTitleBox, summaryGrid);
+
+        ScrollPane scrollPane = new ScrollPane(newRouteLayout);
+        scrollPane.setFitToWidth(true);
+        newRouteTab.setContent(scrollPane);
 
         // ----- PREVIOUS ROUTE TAB -----
         VBox previousRouteLayout = new VBox(10);
@@ -174,7 +204,7 @@ public class GpsAppGui extends Application {
         root.getChildren().addAll(titleBox, tabPane);
         root.setPadding(new Insets(20));
 
-        Scene scene = new Scene(root, 600, 500);
+        Scene scene = new Scene(root, 600, 650);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
