@@ -14,6 +14,12 @@ import core.Route;
 import core.RouteLoader;
 import java.util.ArrayList;
 
+/**
+ * GUI for the gps distance app.
+ * @author Nina Mason
+ * @version 7/31/2025
+ */
+
 public class GpsAppGui extends Application {
 
     private static final String SAVE_FILE_PATH = "saved_routes.json";
@@ -110,7 +116,6 @@ public class GpsAppGui extends Application {
                 currentRoutes.add(newRoute);
                 RouteLoader.saveRoutes(currentRoutes, SAVE_FILE_PATH);
 
-                //resultLabel.setText(newRoute.toString());
                 summaryGrid.getChildren().clear();
                 summaryGrid.add(new Label("Distance (km):"), 0, 0);
                 summaryGrid.add(new Label(String.format("%.2f", newRoute.getDistanceKm())), 1, 0);
@@ -156,8 +161,6 @@ public class GpsAppGui extends Application {
 
         // Load saved routes
         refreshRouteDropdown(routeComboBox);
-        //ArrayList<Route> loadedRoutes = RouteLoader.loadRoutes(SAVE_FILE_PATH);
-        //routeComboBox.getItems().addAll(loadedRoutes);
 
         // Only show route name in dropdown & selected item
         routeComboBox.setCellFactory(lv -> new ListCell<>() {
@@ -219,11 +222,4 @@ public class GpsAppGui extends Application {
         routeComboBox.getItems().addAll(updatedRoutes);
     }
 
-    /**private String calculateRouteSummary(String name1, double lat1, double lon1,
-                                        String name2, double lat2, double lon2) {
-        Location loc1 = new Location(name1, lat1, lon1);
-        Location loc2 = new Location(name2, lat2, lon2);
-        Route route = new Route(loc1, loc2, 30.0, "Route from " + name1 + " to " + name2);
-        return route.toString(); 
-    }*/
 }

@@ -9,9 +9,9 @@ import org.json.JSONObject;
 
 import core.RouteLoader;
 /**
- * Main program to run gps distance app.
+ * Text console for the gps distance app.
  * @author Nina Mason
- * @version 7/25/2025
+ * @version 7/31/2025
  */
 
 public class MainCLI {
