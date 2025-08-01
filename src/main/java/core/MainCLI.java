@@ -21,7 +21,11 @@ public class MainCLI {
     static final String SAVED_FILE_PATH = "saved_routes.json";
     static ArrayList<Route> savedRoutes = new ArrayList<>();
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
+        gpsAppTextConsole();
+    }
+
+    public static void gpsAppTextConsole() {
 
         savedRoutes = RouteLoader.loadRoutes(SAVED_FILE_PATH);
         Location coordinate1 = new Location("", 0, 0);
@@ -37,7 +41,7 @@ public class MainCLI {
         System.out.println("""
             \n\n
             =========================================
-            🧭 Welcome to the GPS Distance Calculator
+             Welcome to the GPS Distance Calculator
             =========================================
             """);
         do {

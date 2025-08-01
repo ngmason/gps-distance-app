@@ -12,7 +12,7 @@ dependencies {
 }
 
 application {
-    mainClass = 'core.Main'
+    mainClass = 'gui.GpsAppGui'
 }
 
 java {
@@ -24,4 +24,12 @@ java {
 javafx {
     version = "21"
     modules = [ 'javafx.controls', 'javafx.fxml' ]
+}
+
+task runCli(type: JavaExec) {
+    group = 'application'
+    description = 'Run the GPS App in CLI mode'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass.set('core.MainCLI')
+    standardInput = System.in
 }

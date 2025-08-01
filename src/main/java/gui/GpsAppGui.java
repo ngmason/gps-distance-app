@@ -124,7 +124,7 @@ public class GpsAppGui extends Application {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Input Error");
                 alert.setHeaderText("Invalid Input");
-                alert.setContentText("⚠️ Please enter valid numbers for all coordinates!");
+                alert.setContentText("Please enter valid numbers for all coordinates!");
 
                 alert.showAndWait();
             }

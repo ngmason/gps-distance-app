@@ -38,25 +38,17 @@ A simple yet powerful Java application with both GUI and CLI modes that calculat
 3. Then run:
    ```bash
    gradle run
-
 ---
 
 ## 🔧 How to Run CLI
 
-1. Run from main source folder to compile:
-- Mac OS:
+1. Make sure Java and Gradle are installed:
    ```bash
-   javac -cp ".:lib/json-20231013.jar" src/main/java/core/*.java
-- Windows OS:
+   java -version
+   gradle -version
+2. Next run gradle build:
    ```bash
-   javac -cp ".;lib/json-20231013.jar" src/main/java/core/*.java
-
-2. Next to run the command line program:
-
-- Mac OS:
+   gradle build
+3. Then run:
    ```bash
-   java -cp ".:lib/json-20231013.jar:src/main/java" core.Main
-
-- Windows OS:
-   ```bash
-   java -cp ".;lib/json-20231013.jar;src/main/java" core.Main
+   gradle runCli --console=plain
