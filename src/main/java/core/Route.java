@@ -3,7 +3,7 @@ package core;
 /**
  * Route class to hold information about a gps route.
  * @author Nina Mason
- * @version 7/25/2025
+ * @version 8/13/2025
  */
 
 public class Route {
@@ -58,6 +58,10 @@ public class Route {
 
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String toString() {

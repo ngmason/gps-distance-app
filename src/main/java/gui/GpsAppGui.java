@@ -2,6 +2,11 @@ package gui;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.stage.Window;
+import java.util.Optional;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
@@ -18,12 +23,13 @@ import java.util.ArrayList;
 /**
  * GUI for the gps distance app.
  * @author Nina Mason
- * @version 7/31/2025
+ * @version 8/13/2025
  */
 
 public class GpsAppGui extends Application {
 
     private static final String SAVE_FILE_PATH = "saved_routes.json";
+    private static final double EPS = 1e-6;
 
     @Override
     public void start(Stage primaryStage) {
@@ -133,32 +139,35 @@ public class GpsAppGui extends Application {
                 double lat2 = Double.parseDouble(lat2Field.getText());
                 double lon2 = Double.parseDouble(long2Field.getText());
                 double speed = speedDropdown.getValue();
-                String routeName = nameField.getText().isEmpty() ? "Untitled Route" : nameField.getText();
+                String routeName = nameField.getText().trim().isEmpty()
+                        ? "Untitled Route" : nameField.getText().trim();
 
                 Location loc1 = new Location("Start", lat1, lon1);
-                Location loc2 = new Location("End", lat2, lon2);
+                Location loc2 = new Location("End",   lat2, lon2);
                 Route newRoute = new Route(loc1, loc2, speed, routeName);
 
-                // Save to file
-                ArrayList<Route> currentRoutes = RouteLoader.loadRoutes(SAVE_FILE_PATH);
-                currentRoutes.add(newRoute);
-                RouteLoader.saveRoutes(currentRoutes, SAVE_FILE_PATH);
+                boolean saved = addRouteWithDuplicateChecks(
+                        newRoute,
+                        calculateBtn.getScene().getWindow() // pass owner
+                );
 
-                summaryGrid.getChildren().clear();
-                summaryGrid.add(new Label("Distance (km):"), 0, 0);
-                summaryGrid.add(new Label(String.format("%.2f", newRoute.getDistanceKm())), 1, 0);
-                summaryGrid.add(new Label("Distance (miles):"), 0, 1);
-                summaryGrid.add(new Label(String.format("%.2f", newRoute.getDistanceMiles())), 1, 1);
-                summaryGrid.add(new Label("Travel Time (hrs):"), 0, 2);
-                summaryGrid.add(new Label(String.format("%.2f", newRoute.getTimeHrs())), 1, 2);
+                if (saved) {
+                    summaryGrid.getChildren().clear();
+                    summaryGrid.add(new Label("Distance (km):"),   0, 0);
+                    summaryGrid.add(new Label(String.format("%.2f", newRoute.getDistanceKm())), 1, 0);
+                    summaryGrid.add(new Label("Distance (miles):"),0, 1);
+                    summaryGrid.add(new Label(String.format("%.2f", newRoute.getDistanceMiles())), 1, 1);
+                    summaryGrid.add(new Label("Travel Time (hrs):"),0, 2);
+                    summaryGrid.add(new Label(String.format("%.2f", newRoute.getTimeHrs())), 1, 2);
 
-                refreshRouteDropdown(routeComboBox);
+                    refreshRouteDropdown(routeComboBox);
+                }
+
             } catch (NumberFormatException ex) {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Input Error");
                 alert.setHeaderText("Invalid Input");
                 alert.setContentText("Please enter valid numbers for all coordinates!");
-
                 alert.showAndWait();
             }
         });
@@ -298,10 +307,130 @@ public class GpsAppGui extends Application {
         launch(args);
     }
 
+    // ----- HELPER METHODS -----
     private void refreshRouteDropdown(ComboBox<Route> routeComboBox) {
         routeComboBox.getItems().clear();
         ArrayList<Route> updatedRoutes = RouteLoader.loadRoutes(SAVE_FILE_PATH);
         routeComboBox.getItems().addAll(updatedRoutes);
+    }
+
+    private boolean nameTaken(String candidate, java.util.List<Route> routes) {
+        String c = candidate.trim();
+        if (c.isEmpty()) return true;
+        return routes.stream().anyMatch(r -> r.getName().equalsIgnoreCase(c));
+    }
+
+    private String suggestUnique(String base, java.util.List<Route> routes) {
+        if (!nameTaken(base, routes)) return base;
+        int i = 2;
+        while (nameTaken(base + " (" + i + ")", routes)) i++;
+        return base + " (" + i + ")";
+    }
+
+    private boolean coordsEqual(double a, double b) {
+        return Math.abs(a - b) < EPS;
+    }
+
+    private boolean coordinatesMatch(Route r, double lat1, double lon1, double lat2, double lon2) {
+        return  coordsEqual(r.getStart().getLatitude(),  lat1) &&
+                coordsEqual(r.getStart().getLongitude(), lon1) &&
+                coordsEqual(r.getEnd().getLatitude(),    lat2) &&
+                coordsEqual(r.getEnd().getLongitude(),   lon2);
+    }
+
+    /**
+     * Adds a route with duplicate checks. Returns true if something was saved.
+     * Name duplicates -> Overwrite/Rename/Cancel dialog.
+     * Coordinate duplicates -> blocks save (informational alert).
+     * @param newRoute, the new route information
+     * @return boolean, whether save was blocked or not
+     */
+    private boolean addRouteWithDuplicateChecks(Route newRoute, Window owner) {
+        ArrayList<Route> currentRoutes = RouteLoader.loadRoutes(SAVE_FILE_PATH);
+
+        String routeName = newRoute.getName();
+        double lat1 = newRoute.getStart().getLatitude();
+        double lon1 = newRoute.getStart().getLongitude();
+        double lat2 = newRoute.getEnd().getLatitude();
+        double lon2 = newRoute.getEnd().getLongitude();
+
+        boolean coordsExist = currentRoutes.stream()
+            .anyMatch(r -> coordinatesMatch(r, lat1, lon1, lat2, lon2));
+        if (coordsExist) {
+            Alert warn = new Alert(Alert.AlertType.INFORMATION);
+            warn.initOwner(owner);
+            warn.setTitle("Duplicate route");
+            warn.setHeaderText("These coordinates are already saved.");
+            warn.setContentText("This route appears to be a duplicate. It won't be added again.");
+            warn.showAndWait();
+            return false;
+        }
+
+        boolean nameExists = currentRoutes.stream()
+            .anyMatch(r -> r.getName().equalsIgnoreCase(routeName));
+        if (nameExists) {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.initOwner(owner);
+            confirm.setTitle("Duplicate name");
+            confirm.setHeaderText("A route named \"" + routeName + "\" already exists.");
+            confirm.setContentText("Do you want to overwrite it?");
+            ButtonType overwrite = new ButtonType("Overwrite");
+            ButtonType rename    = new ButtonType("Rename");
+            ButtonType cancel    = ButtonType.CANCEL;
+            confirm.getButtonTypes().setAll(overwrite, rename, cancel);
+
+            ButtonType result = confirm.showAndWait().orElse(cancel);
+            if (result == overwrite) {
+                currentRoutes.removeIf(r -> r.getName().equalsIgnoreCase(routeName));
+                currentRoutes.add(newRoute);
+                RouteLoader.saveRoutes(currentRoutes, SAVE_FILE_PATH);
+                return true;
+            } else if (result == rename) {
+                String newName = promptForNewRouteName(owner, routeName, currentRoutes);
+                if (newName != null) {
+                    // If Route is immutable, construct a new one here
+                    newRoute.setName(newName);
+                    currentRoutes.add(newRoute);
+                    RouteLoader.saveRoutes(currentRoutes, SAVE_FILE_PATH);
+                    return true;
+                }
+                return false;
+            }
+            return false;
+        }
+
+        // No conflicts
+        currentRoutes.add(newRoute);
+        RouteLoader.saveRoutes(currentRoutes, SAVE_FILE_PATH);
+        return true;
+    }
+
+    /** 
+     * A separate pop-up window if user decides to rename a duplicate route.
+     * This window takes the new name and renames the route, or just cancels.
+     * @param owner, the pop-up window
+     * @param currentName, the current duplicate routes name
+     * @param allRoutes, the list of current routes
+    */
+    private String promptForNewRouteName(Window owner, String currentName, java.util.List<Route> allRoutes) {
+        String initial = suggestUnique(currentName, allRoutes);
+
+        TextInputDialog dlg = new TextInputDialog(initial);
+        dlg.setTitle("Rename route");
+        dlg.setHeaderText("Pick a new name");
+        dlg.setContentText("Route name:");
+        if (owner != null) dlg.initOwner(owner);
+
+        // Disable OK when invalid (blank or duplicate)
+        Button okBtn = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
+        okBtn.setDisable(nameTaken(initial, allRoutes)); // probably false
+
+        dlg.getEditor().textProperty().addListener((obs, oldV, newV) -> {
+            okBtn.setDisable(nameTaken(newV, allRoutes));
+        });
+
+        Optional<String> result = dlg.showAndWait();
+        return result.map(String::trim).filter(s -> !s.isEmpty()).orElse(null);
     }
 
 }
