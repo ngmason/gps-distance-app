@@ -1,23 +1,24 @@
 package gui;
+
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.stage.Window;
 import java.util.Optional;
+
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import java.io.InputStream;
 
 import core.Location;
 import core.Route;
 import core.RouteLoader;
+
 import java.util.ArrayList;
 
 /**
@@ -91,13 +92,13 @@ public class GpsAppGui extends Application {
         coordinatesGrid.add(long2Field, 3, 3);
 
         //Long and Lat hints
-        Label latHint = new Label("Latitude must be −90 to 90");
-        Label lonHint = new Label("Longitude must be −180 to 180");
+        Label latHint = new Label("Latitude must be -90 to 90");
+        Label lonHint = new Label("Longitude must be -180 to 180");
         latHint.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
         lonHint.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
 
-        coordinatesGrid.add(latHint, 1, 4);     // spans columns 1..3 under row 1
-        coordinatesGrid.add(lonHint, 3, 4);     // spans columns 1..3 under row 3
+        coordinatesGrid.add(latHint, 1, 4);
+        coordinatesGrid.add(lonHint, 3, 4);
 
         // Route name input
         Label nameLabel = new Label("Route name:");
@@ -132,6 +133,16 @@ public class GpsAppGui extends Application {
         summaryGrid.setHgap(15);
         summaryGrid.setPadding(new Insets(10));
 
+        String token = "pk.eyJ1IjoibmdtYXNvbiIsImEiOiJjbWZkZmt6Z3MwOGs1Mmxwc3prOXIzdjU1In0.z5AM9yJHjOuDyhQSUS2Vrw";
+        String mapUrl = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/"
+                    + "-98.5795,39.8283,3/600x400?access_token=" + token;
+
+        Image mapImage = new Image(mapUrl, true);
+        ImageView mapPreview = new ImageView(mapImage);
+        mapPreview.setFitWidth(600);
+        mapPreview.setPreserveRatio(true);
+
+
         calculateBtn.setOnAction(e -> {
             try {
                 double lat1 = Double.parseDouble(lat1Field.getText());
@@ -148,7 +159,7 @@ public class GpsAppGui extends Application {
 
                 boolean saved = addRouteWithDuplicateChecks(
                         newRoute,
-                        calculateBtn.getScene().getWindow() // pass owner
+                        calculateBtn.getScene().getWindow() 
                 );
 
                 if (saved) {
@@ -172,27 +183,14 @@ public class GpsAppGui extends Application {
             }
         });
 
-        // Placeholder map
-        ImageView mapImageView = new ImageView();
-        mapImageView.setFitWidth(300);
-        mapImageView.setPreserveRatio(true);
-        
-        // load from classpath (src/main/resources)
-        InputStream mapStream = getClass().getResourceAsStream("/map-preview.png");
-        if (mapStream != null) {
-            mapImageView.setImage(new Image(mapStream));
-        } else {
-            System.err.println("map-preview.png not found on classpath");
-        }
-
         newRouteLayout.getChildren().addAll(
-            coordsHdr,                // section header for the coordinate grid
+            coordsHdr,              
             coordinatesGrid, 
             nameLabel, nameField, 
             speedLabel, speedDropdown, 
             calculateBtn, 
-            new Label("Map preview (static)"),  // caption above the map
-            mapImageView, 
+            new Label("Map preview (dynamic)"),
+            mapPreview,  
             summaryTitleBox, summaryGrid
         );
         ScrollPane scrollPane = new ScrollPane(newRouteLayout);
@@ -215,20 +213,7 @@ public class GpsAppGui extends Application {
 
         // Load saved routes
         refreshRouteDropdown(routeComboBox);
-
-        // Placeholder map again
-        ImageView mapImageView2 = new ImageView();
-        mapImageView2.setFitWidth(300);
-        mapImageView2.setPreserveRatio(true);
         
-        // load from classpath (src/main/resources)
-        InputStream mapStream2 = getClass().getResourceAsStream("/map-preview.png");
-        if (mapStream2 != null) {
-            mapImageView2.setImage(new Image(mapStream2));
-        } else {
-            System.err.println("map-preview.png not found on classpath");
-        }
-
         // Repeat of Summary grid
         Image mapImg2 = new Image(getClass().getResourceAsStream("/map_icon.png"));
         ImageView mapIcon2 = new ImageView(mapImg2);
@@ -244,6 +229,11 @@ public class GpsAppGui extends Application {
         summaryGrid2.setVgap(10);
         summaryGrid2.setHgap(15);
         summaryGrid2.setPadding(new Insets(10));
+
+        Image mapImage2 = new Image(mapUrl, true);
+        ImageView mapPreview2 = new ImageView(mapImage2);
+        mapPreview2.setFitWidth(600);
+        mapPreview2.setPreserveRatio(true);
 
         // Only show route name in dropdown & selected item
         routeComboBox.setCellFactory(lv -> new ListCell<>() {
@@ -266,7 +256,11 @@ public class GpsAppGui extends Application {
         routeComboBox.setOnAction(e -> {
             Route selected = routeComboBox.getValue();
             if (selected != null) {
-                //routeDetails.setText(selected.toString());
+                double lat1 = selected.getStart().getLatitude();
+                double lon1 = selected.getStart().getLongitude();
+                double lat2 = selected.getEnd().getLatitude();
+                double lon2 = selected.getEnd().getLongitude();
+
                 summaryGrid2.getChildren().clear();
                 summaryGrid2.add(new Label("Distance (km):"), 0, 0);
                 summaryGrid2.add(new Label(String.format("%.2f", selected.getDistanceKm())), 1, 0);
@@ -277,9 +271,12 @@ public class GpsAppGui extends Application {
             }
         });
 
-        previousRouteLayout.getChildren().addAll(pickLabel, routeComboBox, new Label("Map preview (static)"),
-            mapImageView2, summaryTitleBox2, summaryGrid2);
-        previousRouteTab.setContent(previousRouteLayout);
+        previousRouteLayout.getChildren().addAll(pickLabel, routeComboBox, new Label("Map preview (static)"), mapPreview2,
+            summaryTitleBox2, summaryGrid2);
+        ScrollPane prevScrollPane = new ScrollPane(previousRouteLayout);
+        prevScrollPane.setFitToWidth(true);
+        previousRouteTab.setContent(prevScrollPane);
+
 
         // Scene
         VBox root = new VBox(15);
@@ -423,7 +420,7 @@ public class GpsAppGui extends Application {
 
         // Disable OK when invalid (blank or duplicate)
         Button okBtn = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
-        okBtn.setDisable(nameTaken(initial, allRoutes)); // probably false
+        okBtn.setDisable(nameTaken(initial, allRoutes)); 
 
         dlg.getEditor().textProperty().addListener((obs, oldV, newV) -> {
             okBtn.setDisable(nameTaken(newV, allRoutes));
