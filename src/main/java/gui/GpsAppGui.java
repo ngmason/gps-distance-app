@@ -24,7 +24,7 @@ import java.util.ArrayList;
 /**
  * GUI for the gps distance app.
  * @author Nina Mason
- * @version 8/13/2025
+ * @version 9/23/2025
  */
 
 public class GpsAppGui extends Application {
@@ -134,10 +134,23 @@ public class GpsAppGui extends Application {
         summaryGrid.setPadding(new Insets(10));
 
         String token = "pk.eyJ1IjoibmdtYXNvbiIsImEiOiJjbWZkZmt6Z3MwOGs1Mmxwc3prOXIzdjU1In0.z5AM9yJHjOuDyhQSUS2Vrw";
-        String mapUrl = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/"
-                    + "-98.5795,39.8283,3/600x400?access_token=" + token;
+        double lonA = -118.2437;
+        double latA = 34.0522;
+        double lonB = -74.0060;
+        double latB = 40.7128;
+        double centerLon = -96.0;
+        double centerLat = 39.0;
+        //double zoom = 5.0;
+        
+        String mapUrl = String.format(
+            "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/"
+        + "pin-s+ff0000(%f,%f),pin-s+0000ff(%f,%f)/auto/600x400?access_token=%s",
+            lonA, latA,  
+            lonB, latB, 
+            token
+        );
 
-        Image mapImage = new Image(mapUrl, true);
+        Image mapImage = new Image(mapUrl, 600, 400, false, false);
         ImageView mapPreview = new ImageView(mapImage);
         mapPreview.setFitWidth(600);
         mapPreview.setPreserveRatio(true);
@@ -230,7 +243,7 @@ public class GpsAppGui extends Application {
         summaryGrid2.setHgap(15);
         summaryGrid2.setPadding(new Insets(10));
 
-        Image mapImage2 = new Image(mapUrl, true);
+        Image mapImage2 = new Image(mapUrl, 600, 400, false, false);
         ImageView mapPreview2 = new ImageView(mapImage2);
         mapPreview2.setFitWidth(600);
         mapPreview2.setPreserveRatio(true);
