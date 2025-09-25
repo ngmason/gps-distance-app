@@ -18,6 +18,7 @@ import javafx.geometry.Pos;
 import core.Location;
 import core.Route;
 import core.RouteLoader;
+import core.MapboxService;
 
 import java.util.ArrayList;
 
@@ -61,11 +62,11 @@ public class GpsAppGui extends Application {
 
         // Narrow label columns, wide text field columns
         ColumnConstraints labelCol = new ColumnConstraints();
-        labelCol.setMinWidth(50); // fixed-ish width for labels
+        labelCol.setMinWidth(50);
         labelCol.setHgrow(Priority.NEVER);
 
         ColumnConstraints fieldCol = new ColumnConstraints();
-        fieldCol.setHgrow(Priority.ALWAYS); // fields take remaining space
+        fieldCol.setHgrow(Priority.ALWAYS);
 
         coordinatesGrid.getColumnConstraints().setAll(
             labelCol, fieldCol, labelCol, fieldCol
@@ -140,18 +141,26 @@ public class GpsAppGui extends Application {
         double latB = 40.7128;
         double centerLon = -96.0;
         double centerLat = 39.0;
-        //double zoom = 5.0;
+        int zoom = 3;
         
-        String mapUrl = String.format(
-            "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/"
-        + "pin-s+ff0000(%f,%f),pin-s+0000ff(%f,%f)/auto/600x400?access_token=%s",
-            lonA, latA,  
-            lonB, latB, 
-            token
-        );
-
-        Image mapImage = new Image(mapUrl, 600, 400, false, false);
-        ImageView mapPreview = new ImageView(mapImage);
+        ImageView mapPreview;
+        try {
+            MapboxService mapbox = new MapboxService(token);
+            String polyline = mapbox.getEncodedPolyline(lonA, latA, lonB, latB);
+            String mapUrl = mapbox.buildStaticMapUrl(polyline, lonA, latA, lonB, latB, centerLon, centerLat, zoom);
+            Image mapImage = new Image(mapUrl, 600, 400, false, false);
+            mapPreview = new ImageView(mapImage);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            // fallback: just show pins if MapboxService fails
+            String fallbackUrl = String.format(
+                "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/"
+            + "pin-s+ff0000(%f,%f),pin-s+0000ff(%f,%f)/auto/600x400?access_token=%s",
+                lonA, latA, lonB, latB, token
+            );
+            Image fallbackImage = new Image(fallbackUrl, 600, 400, false, false);
+            mapPreview = new ImageView(fallbackImage);
+        }
         mapPreview.setFitWidth(600);
         mapPreview.setPreserveRatio(true);
 
@@ -243,8 +252,29 @@ public class GpsAppGui extends Application {
         summaryGrid2.setHgap(15);
         summaryGrid2.setPadding(new Insets(10));
 
-        Image mapImage2 = new Image(mapUrl, 600, 400, false, false);
+        /*Image mapImage2 = new Image(mapUrl, 600, 400, false, false);
         ImageView mapPreview2 = new ImageView(mapImage2);
+        mapPreview2.setFitWidth(600);
+        mapPreview2.setPreserveRatio(true);*/
+
+        ImageView mapPreview2;
+        try {
+            MapboxService mapbox2 = new MapboxService(token);
+            String polyline2 = mapbox2.getEncodedPolyline(lonA, latA, lonB, latB);
+            String mapUrl2 = mapbox2.buildStaticMapUrl(polyline2, lonA, latA, lonB, latB, centerLon, centerLat, zoom);
+            Image mapImage2 = new Image(mapUrl2, 600, 400, false, false);
+            mapPreview2 = new ImageView(mapImage2);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            // fallback: just show pins if MapboxService fails
+            String fallbackUrl2 = String.format(
+                "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/"
+            + "pin-s+ff0000(%f,%f),pin-s+0000ff(%f,%f)/auto/600x400?access_token=%s",
+                lonA, latA, lonB, latB, token
+            );
+            Image fallbackImage2 = new Image(fallbackUrl2, 600, 400, false, false);
+            mapPreview2 = new ImageView(fallbackImage2);
+        }
         mapPreview2.setFitWidth(600);
         mapPreview2.setPreserveRatio(true);
 
