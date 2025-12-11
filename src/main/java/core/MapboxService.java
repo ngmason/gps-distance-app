@@ -1,5 +1,7 @@
 package core;
 
+import java.io.InputStream;
+import java.util.Properties;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -11,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * Builds the map using the Mapbox and Mapbox Directions API.
  * @author Nina Mason
- * @version 9/24/2025
+ * @version 12/11/2025
  */
 
 public class MapboxService {
@@ -19,8 +21,8 @@ public class MapboxService {
     private static final String STYLE_URL = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/";
     private final String token;
 
-    public MapboxService(String token) {
-        this.token = token;
+    public MapboxService() {
+         this.token = loadToken();
     }
 
     /**
@@ -86,5 +88,19 @@ public class MapboxService {
             zoom,
             token 
         );
+    }
+
+    /** 
+     * This function loads the API token for MapboxService.
+     * @return String, the token as a String.
+    */
+    public static String loadToken() {
+        try (InputStream input = MapboxService.class.getResourceAsStream("/config.properties")) {
+            Properties prop = new Properties();
+            prop.load(input);
+            return prop.getProperty("mapbox.token");
+        } catch (Exception e) {
+            throw new RuntimeException("Missing or unreadable config.properties file!");
+        }
     }
 }

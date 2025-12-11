@@ -25,13 +25,26 @@ import java.util.ArrayList;
 /**
  * GUI for the gps distance app.
  * @author Nina Mason
- * @version 9/23/2025
+ * @version 12/09/2025
  */
 
 public class GpsAppGui extends Application {
 
     private static final String SAVE_FILE_PATH = "saved_routes.json";
     private static final double EPS = 1e-6;
+    // -- Map state (must be fields for lambda updates) --
+    private double lonA;
+    private double latA;
+    private double lonB;
+    private double latB;
+    private double centerLon;
+    private double centerLat;
+    private int zoom;
+    private ImageView mapPreview;
+    private ImageView mapPreview2; 
+    private double prevLonA, prevLatA, prevLonB, prevLatB;
+    private double prevCenterLon, prevCenterLat;
+    private int prevZoom;
 
     @Override
     public void start(Stage primaryStage) {
@@ -134,18 +147,16 @@ public class GpsAppGui extends Application {
         summaryGrid.setHgap(15);
         summaryGrid.setPadding(new Insets(10));
 
-        String token = "pk.eyJ1IjoibmdtYXNvbiIsImEiOiJjbWZkZmt6Z3MwOGs1Mmxwc3prOXIzdjU1In0.z5AM9yJHjOuDyhQSUS2Vrw";
-        double lonA = -118.2437;
-        double latA = 34.0522;
-        double lonB = -74.0060;
-        double latB = 40.7128;
-        double centerLon = -96.0;
-        double centerLat = 39.0;
-        int zoom = 3;
-        
-        ImageView mapPreview;
+        lonA = -118.2437;
+        latA = 34.0522;
+        lonB = -74.0060;
+        latB = 40.7128;
+        centerLon = -96.0;
+        centerLat = 39.0;
+        zoom = calculateZoomLevel(latA, lonA, latB, lonB);
+        String token = MapboxService.loadToken();
+        MapboxService mapbox = new MapboxService();
         try {
-            MapboxService mapbox = new MapboxService(token);
             String polyline = mapbox.getEncodedPolyline(lonA, latA, lonB, latB);
             String mapUrl = mapbox.buildStaticMapUrl(polyline, lonA, latA, lonB, latB, centerLon, centerLat, zoom);
             Image mapImage = new Image(mapUrl, 600, 400, false, false);
@@ -172,18 +183,16 @@ public class GpsAppGui extends Application {
                 double lat2 = Double.parseDouble(lat2Field.getText());
                 double lon2 = Double.parseDouble(long2Field.getText());
                 double speed = speedDropdown.getValue();
+
                 String routeName = nameField.getText().trim().isEmpty()
-                        ? "Untitled Route" : nameField.getText().trim();
+                        ? "Untitled Route"
+                        : nameField.getText().trim();
 
                 Location loc1 = new Location("Start", lat1, lon1);
-                Location loc2 = new Location("End",   lat2, lon2);
+                Location loc2 = new Location("End", lat2, lon2);
                 Route newRoute = new Route(loc1, loc2, speed, routeName);
 
-                boolean saved = addRouteWithDuplicateChecks(
-                        newRoute,
-                        calculateBtn.getScene().getWindow() 
-                );
-
+                boolean saved = addRouteWithDuplicateChecks(newRoute, calculateBtn.getScene().getWindow());
                 if (saved) {
                     summaryGrid.getChildren().clear();
                     summaryGrid.add(new Label("Distance (km):"),   0, 0);
@@ -196,12 +205,32 @@ public class GpsAppGui extends Application {
                     refreshRouteDropdown(routeComboBox);
                 }
 
+                lonA = lon1;
+                latA = lat1;
+                lonB = lon2;
+                latB = lat2;
+
+                String polyline = mapbox.getEncodedPolyline(lonA, latA, lonB, latB);
+
+                centerLon = (lonA + lonB) / 2.0;
+                centerLat = (latA + latB) / 2.0;
+                zoom = calculateZoomLevel(latA, lonA, latB, lonB);
+
+                String mapUrl = mapbox.buildStaticMapUrl(
+                        polyline, lonA, latA, lonB, latB, centerLon, centerLat, zoom
+                );
+
+                mapPreview.setImage(new Image(mapUrl, 600, 400, false, false));
+
             } catch (NumberFormatException ex) {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Input Error");
                 alert.setHeaderText("Invalid Input");
                 alert.setContentText("Please enter valid numbers for all coordinates!");
                 alert.showAndWait();
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         });
 
@@ -252,14 +281,8 @@ public class GpsAppGui extends Application {
         summaryGrid2.setHgap(15);
         summaryGrid2.setPadding(new Insets(10));
 
-        /*Image mapImage2 = new Image(mapUrl, 600, 400, false, false);
-        ImageView mapPreview2 = new ImageView(mapImage2);
-        mapPreview2.setFitWidth(600);
-        mapPreview2.setPreserveRatio(true);*/
-
-        ImageView mapPreview2;
         try {
-            MapboxService mapbox2 = new MapboxService(token);
+            MapboxService mapbox2 = new MapboxService();
             String polyline2 = mapbox2.getEncodedPolyline(lonA, latA, lonB, latB);
             String mapUrl2 = mapbox2.buildStaticMapUrl(polyline2, lonA, latA, lonB, latB, centerLon, centerLat, zoom);
             Image mapImage2 = new Image(mapUrl2, 600, 400, false, false);
@@ -298,12 +321,36 @@ public class GpsAppGui extends Application {
 
         routeComboBox.setOnAction(e -> {
             Route selected = routeComboBox.getValue();
-            if (selected != null) {
-                double lat1 = selected.getStart().getLatitude();
-                double lon1 = selected.getStart().getLongitude();
-                double lat2 = selected.getEnd().getLatitude();
-                double lon2 = selected.getEnd().getLongitude();
+            if (selected == null) return;
 
+            try {
+                // Extract coordinates
+                prevLatA = selected.getStart().getLatitude();
+                prevLonA = selected.getStart().getLongitude();
+                prevLatB = selected.getEnd().getLatitude();
+                prevLonB = selected.getEnd().getLongitude();
+
+                // Generate polyline
+                String polyline = mapbox.getEncodedPolyline(prevLonA, prevLatA, prevLonB, prevLatB);
+
+                // Auto-calculate center + zoom
+                prevCenterLon = (prevLonA + prevLonB) / 2.0;
+                prevCenterLat = (prevLatA + prevLatB) / 2.0;
+                prevZoom = calculateZoomLevel(prevLatA, prevLonA, prevLatB, prevLonB);
+
+                // Build map URL
+                String mapUrl = mapbox.buildStaticMapUrl(
+                    polyline,
+                    prevLonA, prevLatA,
+                    prevLonB, prevLatB,
+                    prevCenterLon, prevCenterLat,
+                    prevZoom
+                );
+
+                // Update the map image
+                mapPreview2.setImage(new Image(mapUrl, 600, 400, false, false));
+
+                // Update summary
                 summaryGrid2.getChildren().clear();
                 summaryGrid2.add(new Label("Distance (km):"), 0, 0);
                 summaryGrid2.add(new Label(String.format("%.2f", selected.getDistanceKm())), 1, 0);
@@ -311,9 +358,11 @@ public class GpsAppGui extends Application {
                 summaryGrid2.add(new Label(String.format("%.2f", selected.getDistanceMiles())), 1, 1);
                 summaryGrid2.add(new Label("Travel Time (hrs):"), 0, 2);
                 summaryGrid2.add(new Label(String.format("%.2f", selected.getTimeHrs())), 1, 2);
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         });
-
         previousRouteLayout.getChildren().addAll(pickLabel, routeComboBox, new Label("Map preview (static)"), mapPreview2,
             summaryTitleBox2, summaryGrid2);
         ScrollPane prevScrollPane = new ScrollPane(previousRouteLayout);
@@ -471,6 +520,37 @@ public class GpsAppGui extends Application {
 
         Optional<String> result = dlg.showAndWait();
         return result.map(String::trim).filter(s -> !s.isEmpty()).orElse(null);
+    }
+
+    /** 
+     * This function uses the Haversine formula to calculate distance and 
+     * the amount of zoom for the map based on the distance.
+     * @param latA, the latitude of coordinate A
+     * @param lonA, the longitude of coordinate A
+     * @param latB, the latitude of coordinate B
+     * @param lonB, the longitude of coordinate B
+     * @return int, the level of zoom the map needs based on the Haversine distance
+    */
+    private int calculateZoomLevel(double latA, double lonA, double latB, double lonB) {
+        // Haversine distance in miles
+        double earthRadius = 3958.8; 
+        double dLat = Math.toRadians(latB - latA);
+        double dLon = Math.toRadians(lonB - lonA);
+
+        double a = Math.sin(dLat/2) * Math.sin(dLat/2)
+                + Math.cos(Math.toRadians(latA)) * Math.cos(Math.toRadians(latB))
+                * Math.sin(dLon/2) * Math.sin(dLon/2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        double distanceMiles = earthRadius * c;
+
+        // Convert distance to zoom
+        if (distanceMiles < 5) return 10;
+        if (distanceMiles < 20) return 8;
+        if (distanceMiles < 50) return 6;
+        if (distanceMiles < 200) return 4;
+        if (distanceMiles < 1000) return 4;
+        return 3;
     }
 
 }

@@ -10,3 +10,4 @@
 .gradle/
 build/
 saved_routes.json
+config.properties
