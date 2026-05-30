@@ -282,9 +282,8 @@ public class GpsAppGui extends Application {
         summaryGrid2.setPadding(new Insets(10));
 
         try {
-            MapboxService mapbox2 = new MapboxService();
-            String polyline2 = mapbox2.getEncodedPolyline(lonA, latA, lonB, latB);
-            String mapUrl2 = mapbox2.buildStaticMapUrl(polyline2, lonA, latA, lonB, latB, centerLon, centerLat, zoom);
+            String polyline2 = mapbox.getEncodedPolyline(lonA, latA, lonB, latB);
+            String mapUrl2 = mapbox.buildStaticMapUrl(polyline2, lonA, latA, lonB, latB, centerLon, centerLat, zoom);
             Image mapImage2 = new Image(mapUrl2, 600, 400, false, false);
             mapPreview2 = new ImageView(mapImage2);
         } catch (Exception ex) {
@@ -532,23 +531,11 @@ public class GpsAppGui extends Application {
      * @return int, the level of zoom the map needs based on the Haversine distance
     */
     private int calculateZoomLevel(double latA, double lonA, double latB, double lonB) {
-        // Haversine distance in miles
-        double earthRadius = 3958.8; 
-        double dLat = Math.toRadians(latB - latA);
-        double dLon = Math.toRadians(lonB - lonA);
+        double distanceMiles = Route.haversine(latA, lonA, latB, lonB)[1];
 
-        double a = Math.sin(dLat/2) * Math.sin(dLat/2)
-                + Math.cos(Math.toRadians(latA)) * Math.cos(Math.toRadians(latB))
-                * Math.sin(dLon/2) * Math.sin(dLon/2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        double distanceMiles = earthRadius * c;
-
-        // Convert distance to zoom
         if (distanceMiles < 5) return 10;
         if (distanceMiles < 20) return 8;
         if (distanceMiles < 50) return 6;
-        if (distanceMiles < 200) return 4;
         if (distanceMiles < 1000) return 4;
         return 3;
     }
