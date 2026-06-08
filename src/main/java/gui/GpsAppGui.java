@@ -449,6 +449,12 @@ public class GpsAppGui extends Application {
 
         try {
             ImageIO.write(bufferedImage, "png", file);
+            Alert success = new Alert(Alert.AlertType.INFORMATION);
+            success.initOwner(owner);
+            success.setTitle("Export successful");
+            success.setHeaderText(null);
+            success.setContentText("Map saved to: " + file.getAbsolutePath());
+            success.showAndWait();
         } catch (IOException e) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.initOwner(owner);
