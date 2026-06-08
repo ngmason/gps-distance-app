@@ -20,7 +20,13 @@ import core.Route;
 import core.RouteLoader;
 import core.MapboxService;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import javafx.embed.swing.SwingFXUtils;
+import javafx.stage.FileChooser;
+import javax.imageio.ImageIO;
 
 /**
  * GUI for the gps distance app.
@@ -234,14 +240,20 @@ public class GpsAppGui extends Application {
             }
         });
 
+        Button exportBtn1 = new Button("Export as PNG");
+        exportBtn1.setOnAction(e ->
+            exportMapAsPng(mapPreview.getImage(), exportBtn1.getScene().getWindow())
+        );
+
         newRouteLayout.getChildren().addAll(
-            coordsHdr,              
-            coordinatesGrid, 
-            nameLabel, nameField, 
-            speedLabel, speedDropdown, 
-            calculateBtn, 
+            coordsHdr,
+            coordinatesGrid,
+            nameLabel, nameField,
+            speedLabel, speedDropdown,
+            calculateBtn,
             new Label("Map preview (dynamic)"),
-            mapPreview,  
+            mapPreview,
+            exportBtn1,
             summaryTitleBox, summaryGrid
         );
         ScrollPane scrollPane = new ScrollPane(newRouteLayout);
@@ -362,8 +374,13 @@ public class GpsAppGui extends Application {
                 ex.printStackTrace();
             }
         });
+        Button exportBtn2 = new Button("Export as PNG");
+        exportBtn2.setOnAction(e ->
+            exportMapAsPng(mapPreview2.getImage(), exportBtn2.getScene().getWindow())
+        );
+
         previousRouteLayout.getChildren().addAll(pickLabel, routeComboBox, new Label("Map preview (static)"), mapPreview2,
-            summaryTitleBox2, summaryGrid2);
+            exportBtn2, summaryTitleBox2, summaryGrid2);
         ScrollPane prevScrollPane = new ScrollPane(previousRouteLayout);
         prevScrollPane.setFitToWidth(true);
         previousRouteTab.setContent(prevScrollPane);
@@ -396,6 +413,51 @@ public class GpsAppGui extends Application {
     }
 
     // ----- HELPER METHODS -----
+    private void exportMapAsPng(Image image, Window owner) {
+        if (image == null || image.isError()) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.initOwner(owner);
+            alert.setTitle("Export failed");
+            alert.setContentText("No map image is available to export.");
+            alert.showAndWait();
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save Map Image");
+        fileChooser.setInitialFileName("route_map.png");
+        fileChooser.getExtensionFilters().add(
+            new FileChooser.ExtensionFilter("PNG Image", "*.png")
+        );
+
+        File file = fileChooser.showSaveDialog(owner);
+        if (file == null) return;
+
+        if (!file.getName().toLowerCase().endsWith(".png")) {
+            file = new File(file.getParentFile(), file.getName() + ".png");
+        }
+
+        BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
+        if (bufferedImage == null) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.initOwner(owner);
+            alert.setTitle("Export failed");
+            alert.setContentText("The map is still loading. Please wait and try again.");
+            alert.showAndWait();
+            return;
+        }
+
+        try {
+            ImageIO.write(bufferedImage, "png", file);
+        } catch (IOException e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.initOwner(owner);
+            alert.setTitle("Export failed");
+            alert.setContentText("Could not write file: " + e.getMessage());
+            alert.showAndWait();
+        }
+    }
+
     private void refreshRouteDropdown(ComboBox<Route> routeComboBox) {
         routeComboBox.getItems().clear();
         ArrayList<Route> updatedRoutes = RouteLoader.loadRoutes(SAVE_FILE_PATH);
