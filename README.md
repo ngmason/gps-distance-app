@@ -20,6 +20,7 @@ A Java/JavaFX application that calculates distances between coordinates, estimat
       - Distance (km & miles)
       - Travel time
       - Selected speed
+   - Export the current map preview as a PNG from either tab (FileChooser dialog; `.png` extension appended automatically if omitted)
 
 - Route Persistence
    - Saved to saved_routes.json
@@ -50,7 +51,7 @@ A Java/JavaFX application that calculates distances between coordinates, estimat
 ## 📦 Dependencies
 
 - Java 21+
-- JavaFX 21+
+- JavaFX 21+ (modules: `controls`, `fxml`, `web`, `swing`)
 - [`org.json`](https://github.com/stleary/JSON-java) library (included in `lib/`)
 - Gradle 8.14.3
 - Mapbox API Token (required)
@@ -103,5 +104,4 @@ src/main/resources/config.properties
 - Support for multi-waypoint routes
 - User-clickable map for coordinate selection
 - Dark-mode map styles
-- Export route screenshot as PNG
 - Auto-detect city names / reverse geocoding

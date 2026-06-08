@@ -45,6 +45,8 @@ Single JavaFX class with two tabs:
 - **"Enter new route"** — coordinate inputs + speed dropdown → calls `MapboxService` for polyline → renders static map image, saves to `saved_routes.json`
 - **"Select previous route"** — dropdown of routes from `saved_routes.json` → shows stored data + map
 
+Both tabs have an **Export as PNG** button (`exportMapAsPng(Image, Window)` in `GpsAppGui`): opens a `FileChooser`, appends `.png` if the user omits it, shows a success dialog with the saved path, or an error dialog on failure.
+
 Auto-zoom: zoom level is derived from Haversine distance (shorter distance → higher zoom). Duplicate detection prompts the user to rename or overwrite.
 
 ### Data flow
@@ -58,7 +60,7 @@ User input → Route (Haversine calc) → MapboxService (API calls) → static m
 ### Dependencies
 
 - `org.json` (json-20231013.jar, bundled in `lib/`) — JSON parse/write
-- JavaFX 21 via `org.openjfx.javafxplugin` (modules: controls, fxml, web)
+- JavaFX 21 via `org.openjfx.javafxplugin` (modules: controls, fxml, web, swing) — `swing` required for `SwingFXUtils` used in PNG export
 
 ### Persistent data files
 
