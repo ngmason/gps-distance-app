@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
 import java.net.URL;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 
@@ -90,7 +91,37 @@ public class MapboxService {
         );
     }
 
-    /** 
+    /**
+     * Returns a human-readable place name for the given coordinates using the
+     * Mapbox Geocoding API. Returns null if the API returns no results.
+     * @param lon, longitude of the coordinate
+     * @param lat, latitude of the coordinate
+     * @return String, the place name, or null if none found
+     */
+    public String reverseGeocode(double lon, double lat) throws Exception {
+        String urlStr = String.format(
+            "https://api.mapbox.com/geocoding/v5/mapbox.places/%f,%f.json?access_token=%s",
+            lon, lat, token
+        );
+
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null) {
+                response.append(line);
+            }
+
+            JSONArray features = new JSONObject(response.toString()).getJSONArray("features");
+            if (features.isEmpty()) return null;
+            return features.getJSONObject(0).getString("place_name");
+        }
+    }
+
+    /**
      * This function loads the API token for MapboxService.
      * @return String, the token as a String.
     */
