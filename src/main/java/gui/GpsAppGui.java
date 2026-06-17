@@ -24,6 +24,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.stage.FileChooser;
 import javax.imageio.ImageIO;
@@ -182,20 +183,72 @@ public class GpsAppGui extends Application {
         mapPreview.setPreserveRatio(true);
 
 
+        Label detectedHdr = new Label("Detected Places:");
+        detectedHdr.setStyle("-fx-font-size:14px; -fx-font-weight:bold;");
+
+        GridPane detectedGrid = new GridPane();
+        detectedGrid.setHgap(15);
+        detectedGrid.setVgap(10);
+        detectedGrid.setPadding(new Insets(10));
+
+        Label placeName1Label = new Label("Not detected yet");
+        placeName1Label.setWrapText(true);
+        Label placeName2Label = new Label("Not detected yet");
+        placeName2Label.setWrapText(true);
+
+        detectedGrid.add(new Label("Location 1:"), 0, 0);
+        detectedGrid.add(placeName1Label, 1, 0);
+        detectedGrid.add(new Label("Location 2:"), 0, 1);
+        detectedGrid.add(placeName2Label, 1, 1);
+
         calculateBtn.setOnAction(e -> {
+            double lat1, lon1, lat2, lon2;
             try {
-                double lat1 = Double.parseDouble(lat1Field.getText());
-                double lon1 = Double.parseDouble(long1Field.getText());
-                double lat2 = Double.parseDouble(lat2Field.getText());
-                double lon2 = Double.parseDouble(long2Field.getText());
-                double speed = speedDropdown.getValue();
+                lat1 = Double.parseDouble(lat1Field.getText());
+                lon1 = Double.parseDouble(long1Field.getText());
+                lat2 = Double.parseDouble(lat2Field.getText());
+                lon2 = Double.parseDouble(long2Field.getText());
+            } catch (NumberFormatException ex) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Input Error");
+                alert.setHeaderText("Invalid Input");
+                alert.setContentText("Please enter valid numbers for all coordinates!");
+                alert.showAndWait();
+                return;
+            }
 
-                String routeName = nameField.getText().trim().isEmpty()
-                        ? "Untitled Route"
-                        : nameField.getText().trim();
+            double speed = speedDropdown.getValue();
+            String routeName = nameField.getText().trim().isEmpty()
+                    ? "Untitled Route"
+                    : nameField.getText().trim();
 
-                Location loc1 = new Location("Start", lat1, lon1);
-                Location loc2 = new Location("End", lat2, lon2);
+            placeName1Label.setText("Detecting...");
+            placeName2Label.setText("Detecting...");
+            calculateBtn.setDisable(true);
+
+            final double fLat1 = lat1, fLon1 = lon1, fLat2 = lat2, fLon2 = lon2;
+
+            Task<String[]> task = new Task<>() {
+                @Override
+                protected String[] call() throws Exception {
+                    String name1 = mapbox.reverseGeocode(fLon1, fLat1);
+                    String name2 = mapbox.reverseGeocode(fLon2, fLat2);
+                    String polyline = mapbox.getEncodedPolyline(fLon1, fLat1, fLon2, fLat2);
+                    return new String[]{ name1, name2, polyline };
+                }
+            };
+
+            task.setOnSucceeded(ev -> {
+                String[] results = task.getValue();
+                String name1 = results[0] != null ? results[0] : "Start";
+                String name2 = results[1] != null ? results[1] : "End";
+                String polyline = results[2];
+
+                placeName1Label.setText(name1);
+                placeName2Label.setText(name2);
+
+                Location loc1 = new Location(name1, fLat1, fLon1);
+                Location loc2 = new Location(name2, fLat2, fLon2);
                 Route newRoute = new Route(loc1, loc2, speed, routeName);
 
                 boolean saved = addRouteWithDuplicateChecks(newRoute, calculateBtn.getScene().getWindow());
@@ -211,12 +264,10 @@ public class GpsAppGui extends Application {
                     refreshRouteDropdown(routeComboBox);
                 }
 
-                lonA = lon1;
-                latA = lat1;
-                lonB = lon2;
-                latB = lat2;
-
-                String polyline = mapbox.getEncodedPolyline(lonA, latA, lonB, latB);
+                lonA = fLon1;
+                latA = fLat1;
+                lonB = fLon2;
+                latB = fLat2;
 
                 centerLon = (lonA + lonB) / 2.0;
                 centerLat = (latA + latB) / 2.0;
@@ -225,19 +276,24 @@ public class GpsAppGui extends Application {
                 String mapUrl = mapbox.buildStaticMapUrl(
                         polyline, lonA, latA, lonB, latB, centerLon, centerLat, zoom
                 );
-
                 mapPreview.setImage(new Image(mapUrl, 600, 400, false, false));
 
-            } catch (NumberFormatException ex) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Input Error");
-                alert.setHeaderText("Invalid Input");
-                alert.setContentText("Please enter valid numbers for all coordinates!");
-                alert.showAndWait();
+                calculateBtn.setDisable(false);
+            });
 
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
+            task.setOnFailed(ev -> {
+                placeName1Label.setText("Not detected yet");
+                placeName2Label.setText("Not detected yet");
+                calculateBtn.setDisable(false);
+                Throwable ex = task.getException();
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Error");
+                alert.setHeaderText("Could not calculate route");
+                alert.setContentText(ex != null ? ex.getMessage() : "An unexpected error occurred.");
+                alert.showAndWait();
+            });
+
+            new Thread(task).start();
         });
 
         Button exportBtn1 = new Button("Export as PNG");
@@ -248,6 +304,7 @@ public class GpsAppGui extends Application {
         newRouteLayout.getChildren().addAll(
             coordsHdr,
             coordinatesGrid,
+            detectedHdr, detectedGrid,
             nameLabel, nameField,
             speedLabel, speedDropdown,
             calculateBtn,
