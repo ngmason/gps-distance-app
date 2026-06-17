@@ -21,9 +21,11 @@ A Java/JavaFX application that calculates distances between coordinates, estimat
       - Travel time
       - Selected speed
    - Export the current map preview as a PNG from either tab (FileChooser dialog; `.png` extension appended automatically if omitted)
+   - Coordinate inputs automatically detect place names via the Mapbox Geocoding API; results appear in a "Detected Places" section below the coordinate grid
 
 - Route Persistence
    - Saved to saved_routes.json
+   - Route locations stored with detected place names rather than generic labels
    - Overwrite/rename/duplicate detection
    - Loads instantly into the GUI on startup
 
@@ -35,7 +37,7 @@ A Java/JavaFX application that calculates distances between coordinates, estimat
    - Location
    - Route
    - RouteLoader
-   - MapboxService (handles API calls + polyline encoding)
+   - MapboxService (handles Directions, Static Maps, and Geocoding API calls)
 
 ---
 
@@ -104,4 +106,3 @@ src/main/resources/config.properties
 - Support for multi-waypoint routes
 - User-clickable map for coordinate selection
 - Dark-mode map styles
-- Auto-detect city names / reverse geocoding
