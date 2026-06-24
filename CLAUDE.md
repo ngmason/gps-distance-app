@@ -35,14 +35,14 @@ A template is at `src/main/resources/config.properties.example`.
 |---|---|
 | `Location` | Data-only: name + lat/long |
 | `Route` | Distance & time calculations; uses Haversine formula for great-circle km, then `× 0.621371` for miles; `time = distance_miles / speed_mph` |
-| `MapboxService` | HTTP calls to Mapbox Directions API (encoded polyline), Static Maps API (map image URL), and Geocoding API (`reverseGeocode(lon, lat)` → place name string, `null` if no result); reads token via `loadToken()` from `config.properties` |
+| `MapboxService` | HTTP calls to Mapbox Directions API (encoded polyline), Static Maps API (map image URL), and Geocoding API; `reverseGeocode(lon, lat)` → place name string (`null` if no result); `forwardGeocode(String query)` → nullable `GeoResult` (`lat`, `lon`, `placeName`), adds `proximity=ip` to bias results toward the user's location; nested `record GeoResult(double lat, double lon, String placeName)`; reads token via `loadToken()` from `config.properties` |
 | `RouteLoader` | JSON persistence: reads `saved_routes.json` (falls back to `src/main/resources/routes.json`); writes back with `org.json` |
 | `MainCLI` | Interactive terminal loop; parses `(lat, lon)` input strings |
 
 ### GUI layer (`src/main/java/gui/GpsAppGui.java`)
 
 Single JavaFX class with two tabs:
-- **"Enter new route"** — coordinate inputs + speed dropdown → on Calculate, a `javafx.concurrent.Task` runs two `reverseGeocode` calls and `getEncodedPolyline` in the background; detected place names populate the "Detected Places" section and are used as `Location` names (fallback: `"Start"` / `"End"`); map image and save all happen in `setOnSucceeded` on the FX thread
+- **"Enter new route"** — "Locations" section: each location has an address search field + Search button (fires `Task<MapboxService.GeoResult>` calling `forwardGeocode`; on success populates lat/lon fields and sets a `"Search result: <placeName>"` label beneath the field; `"Search result: Not found"` on no result or failure) and directly-editable lat/lon fields (**source of truth for Calculate**); on Calculate, a separate `Task` runs two `reverseGeocode` calls and `getEncodedPolyline` in the background; reverse-geocoded names populate the **"Resolved Places"** section and are used as `Location` names (fallback: `"Start"` / `"End"`); map image and save all happen in `setOnSucceeded` on the FX thread
 - **"Select previous route"** — dropdown of routes from `saved_routes.json` → shows stored data + map
 
 Both tabs have an **Export as PNG** button (`exportMapAsPng(Image, Window)` in `GpsAppGui`): opens a `FileChooser`, appends `.png` if the user omits it, shows a success dialog with the saved path, or an error dialog on failure.

@@ -13,7 +13,8 @@ A Java/JavaFX application that calculates distances between coordinates, estimat
    - Auto-adjusting zoom level for long vs. short routes
 
 - Interactive JavaFX GUI
-   - Enter coordinates, route names, and speeds
+   - Enter coordinates directly or search by address or place name; address search uses the Mapbox Geocoding API and populates the latitude and longitude fields automatically
+   - Resolved place name shown below each search field immediately after Search (e.g., `"Search result: Red Rocks Amphitheatre, Morrison, Colorado"`); latitude and longitude fields remain directly editable and are always the source of truth for Calculate
    - Live-updating map preview
    - Saved routes dropdown now regenerates the map dynamically
    - Route summary includes:
@@ -21,7 +22,7 @@ A Java/JavaFX application that calculates distances between coordinates, estimat
       - Travel time
       - Selected speed
    - Export the current map preview as a PNG from either tab (FileChooser dialog; `.png` extension appended automatically if omitted)
-   - Coordinate inputs automatically detect place names via the Mapbox Geocoding API; results appear in a "Detected Places" section below the coordinate grid
+   - After Calculate, reverse geocoding identifies canonical place names for both coordinates; results appear in a "Resolved Places" section
 
 - Route Persistence
    - Saved to saved_routes.json
