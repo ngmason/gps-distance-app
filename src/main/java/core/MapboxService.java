@@ -122,6 +122,39 @@ public class MapboxService {
     }
 
     /**
+     * Returns the latitude and longitude for the given address or place name
+     * using the Mapbox Geocoding API. Returns null if the API returns no results.
+     * @param query, an address or place name to search for
+     * @return double[] { lat, lon }, or null if no result found
+     */
+    public double[] forwardGeocode(String query) throws Exception {
+        String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
+        String urlStr = String.format(
+            "https://api.mapbox.com/geocoding/v5/mapbox.places/%s.json?access_token=%s",
+            encoded, token
+        );
+
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null) {
+                response.append(line);
+            }
+
+            JSONArray features = new JSONObject(response.toString()).getJSONArray("features");
+            if (features.isEmpty()) return null;
+            JSONArray coords = features.getJSONObject(0)
+                                       .getJSONObject("geometry")
+                                       .getJSONArray("coordinates");
+            return new double[]{ coords.getDouble(1), coords.getDouble(0) };
+        }
+    }
+
+    /**
      * This function loads the API token for MapboxService.
      * @return String, the token as a String.
     */

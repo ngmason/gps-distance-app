@@ -72,8 +72,8 @@ public class GpsAppGui extends Application {
         newRouteLayout.setStyle("-fx-background-color: #D3D3D3; -fx-border-radius: 20; -fx-background-radius: 20;");
 
         // Coordinate inputs
-        // Section: Coordinates
-        Label coordsHdr = new Label("Coordinates");
+        // Section: Locations
+        Label coordsHdr = new Label("Locations");
         coordsHdr.setStyle("-fx-font-size:14px; -fx-font-weight:bold;");
 
         GridPane coordinatesGrid = new GridPane();
@@ -92,25 +92,47 @@ public class GpsAppGui extends Application {
             labelCol, fieldCol, labelCol, fieldCol
         );
 
-        Label coord1Label = new Label("Coordinate 1");
+        Label coord1Label = new Label("Location 1");
+        TextField addr1Field = new TextField();
+        addr1Field.setPromptText("e.g., Times Square, New York");
+        Button searchBtn1 = new Button("Search");
+        searchBtn1.setDisable(true);
+        addr1Field.textProperty().addListener((obs, oldV, newV) ->
+            searchBtn1.setDisable(newV.trim().isEmpty())
+        );
         TextField lat1Field = new TextField();
         TextField long1Field = new TextField();
 
-        Label coord2Label = new Label("Coordinate 2");
+        Label coord2Label = new Label("Location 2");
+        TextField addr2Field = new TextField();
+        addr2Field.setPromptText("e.g., Eiffel Tower, Paris");
+        Button searchBtn2 = new Button("Search");
+        searchBtn2.setDisable(true);
+        addr2Field.textProperty().addListener((obs, oldV, newV) ->
+            searchBtn2.setDisable(newV.trim().isEmpty())
+        );
         TextField lat2Field = new TextField();
         TextField long2Field = new TextField();
 
         coordinatesGrid.add(coord1Label, 0, 0);
-        coordinatesGrid.add(new Label("Lat:"), 0, 1);
-        coordinatesGrid.add(lat1Field, 1, 1);
-        coordinatesGrid.add(new Label("Long:"), 2, 1);
-        coordinatesGrid.add(long1Field, 3, 1);
+        coordinatesGrid.add(new Label("Search:"), 0, 1);
+        GridPane.setColumnSpan(addr1Field, 2);
+        coordinatesGrid.add(addr1Field, 1, 1);
+        coordinatesGrid.add(searchBtn1, 3, 1);
+        coordinatesGrid.add(new Label("Lat:"), 0, 2);
+        coordinatesGrid.add(lat1Field, 1, 2);
+        coordinatesGrid.add(new Label("Long:"), 2, 2);
+        coordinatesGrid.add(long1Field, 3, 2);
 
-        coordinatesGrid.add(coord2Label, 0, 2);
-        coordinatesGrid.add(new Label("Lat:"), 0, 3);
-        coordinatesGrid.add(lat2Field, 1, 3);
-        coordinatesGrid.add(new Label("Long:"), 2, 3);
-        coordinatesGrid.add(long2Field, 3, 3);
+        coordinatesGrid.add(coord2Label, 0, 3);
+        coordinatesGrid.add(new Label("Search:"), 0, 4);
+        GridPane.setColumnSpan(addr2Field, 2);
+        coordinatesGrid.add(addr2Field, 1, 4);
+        coordinatesGrid.add(searchBtn2, 3, 4);
+        coordinatesGrid.add(new Label("Lat:"), 0, 5);
+        coordinatesGrid.add(lat2Field, 1, 5);
+        coordinatesGrid.add(new Label("Long:"), 2, 5);
+        coordinatesGrid.add(long2Field, 3, 5);
 
         //Long and Lat hints
         Label latHint = new Label("Latitude must be -90 to 90");
@@ -118,8 +140,8 @@ public class GpsAppGui extends Application {
         latHint.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
         lonHint.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
 
-        coordinatesGrid.add(latHint, 1, 4);
-        coordinatesGrid.add(lonHint, 3, 4);
+        coordinatesGrid.add(latHint, 1, 6);
+        coordinatesGrid.add(lonHint, 3, 6);
 
         // Route name input
         Label nameLabel = new Label("Route name:");
@@ -163,6 +185,77 @@ public class GpsAppGui extends Application {
         zoom = calculateZoomLevel(latA, lonA, latB, lonB);
         String token = MapboxService.loadToken();
         MapboxService mapbox = new MapboxService();
+
+        searchBtn1.setOnAction(e -> {
+            String query = addr1Field.getText().trim();
+            searchBtn1.setDisable(true);
+            Task<double[]> searchTask = new Task<>() {
+                @Override
+                protected double[] call() throws Exception {
+                    return mapbox.forwardGeocode(query);
+                }
+            };
+            searchTask.setOnSucceeded(ev -> {
+                double[] result = searchTask.getValue();
+                if (result == null) {
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("No results");
+                    alert.setHeaderText(null);
+                    alert.setContentText("No location found for \"" + query + "\".");
+                    alert.showAndWait();
+                } else {
+                    lat1Field.setText(String.valueOf(result[0]));
+                    long1Field.setText(String.valueOf(result[1]));
+                }
+                searchBtn1.setDisable(addr1Field.getText().trim().isEmpty());
+            });
+            searchTask.setOnFailed(ev -> {
+                searchBtn1.setDisable(addr1Field.getText().trim().isEmpty());
+                Throwable ex = searchTask.getException();
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Search failed");
+                alert.setHeaderText("Could not search for location");
+                alert.setContentText(ex != null ? ex.getMessage() : "An unexpected error occurred.");
+                alert.showAndWait();
+            });
+            new Thread(searchTask).start();
+        });
+
+        searchBtn2.setOnAction(e -> {
+            String query = addr2Field.getText().trim();
+            searchBtn2.setDisable(true);
+            Task<double[]> searchTask = new Task<>() {
+                @Override
+                protected double[] call() throws Exception {
+                    return mapbox.forwardGeocode(query);
+                }
+            };
+            searchTask.setOnSucceeded(ev -> {
+                double[] result = searchTask.getValue();
+                if (result == null) {
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("No results");
+                    alert.setHeaderText(null);
+                    alert.setContentText("No location found for \"" + query + "\".");
+                    alert.showAndWait();
+                } else {
+                    lat2Field.setText(String.valueOf(result[0]));
+                    long2Field.setText(String.valueOf(result[1]));
+                }
+                searchBtn2.setDisable(addr2Field.getText().trim().isEmpty());
+            });
+            searchTask.setOnFailed(ev -> {
+                searchBtn2.setDisable(addr2Field.getText().trim().isEmpty());
+                Throwable ex = searchTask.getException();
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Search failed");
+                alert.setHeaderText("Could not search for location");
+                alert.setContentText(ex != null ? ex.getMessage() : "An unexpected error occurred.");
+                alert.showAndWait();
+            });
+            new Thread(searchTask).start();
+        });
+
         try {
             String polyline = mapbox.getEncodedPolyline(lonA, latA, lonB, latB);
             String mapUrl = mapbox.buildStaticMapUrl(polyline, lonA, latA, lonB, latB, centerLon, centerLat, zoom);
@@ -183,7 +276,7 @@ public class GpsAppGui extends Application {
         mapPreview.setPreserveRatio(true);
 
 
-        Label detectedHdr = new Label("Detected Places:");
+        Label detectedHdr = new Label("Resolved Places:");
         detectedHdr.setStyle("-fx-font-size:14px; -fx-font-weight:bold;");
 
         GridPane detectedGrid = new GridPane();
