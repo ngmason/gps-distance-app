@@ -18,6 +18,8 @@ import java.nio.charset.StandardCharsets;
  */
 
 public class MapboxService {
+    public record GeoResult(double lat, double lon, String placeName) {}
+
     private static final String BASE_URL = "https://api.mapbox.com/directions/v5/mapbox/driving/";
     private static final String STYLE_URL = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/";
     private final String token;
@@ -127,10 +129,10 @@ public class MapboxService {
      * @param query, an address or place name to search for
      * @return double[] { lat, lon }, or null if no result found
      */
-    public double[] forwardGeocode(String query) throws Exception {
+    public GeoResult forwardGeocode(String query) throws Exception {
         String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
         String urlStr = String.format(
-            "https://api.mapbox.com/geocoding/v5/mapbox.places/%s.json?access_token=%s",
+            "https://api.mapbox.com/geocoding/v5/mapbox.places/%s.json?proximity=ip&access_token=%s",
             encoded, token
         );
 
@@ -147,10 +149,10 @@ public class MapboxService {
 
             JSONArray features = new JSONObject(response.toString()).getJSONArray("features");
             if (features.isEmpty()) return null;
-            JSONArray coords = features.getJSONObject(0)
-                                       .getJSONObject("geometry")
-                                       .getJSONArray("coordinates");
-            return new double[]{ coords.getDouble(1), coords.getDouble(0) };
+            JSONObject feature = features.getJSONObject(0);
+            JSONArray coords = feature.getJSONObject("geometry").getJSONArray("coordinates");
+            String placeName = feature.getString("place_name");
+            return new GeoResult(coords.getDouble(1), coords.getDouble(0), placeName);
         }
     }
 

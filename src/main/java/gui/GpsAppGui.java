@@ -100,6 +100,8 @@ public class GpsAppGui extends Application {
         addr1Field.textProperty().addListener((obs, oldV, newV) ->
             searchBtn1.setDisable(newV.trim().isEmpty())
         );
+        Label resolvedLabel1 = new Label("");
+        resolvedLabel1.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
         TextField lat1Field = new TextField();
         TextField long1Field = new TextField();
 
@@ -111,13 +113,16 @@ public class GpsAppGui extends Application {
         addr2Field.textProperty().addListener((obs, oldV, newV) ->
             searchBtn2.setDisable(newV.trim().isEmpty())
         );
+        Label resolvedLabel2 = new Label("");
+        resolvedLabel2.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
         TextField lat2Field = new TextField();
         TextField long2Field = new TextField();
 
         coordinatesGrid.add(coord1Label, 0, 0);
         coordinatesGrid.add(new Label("Search:"), 0, 1);
-        GridPane.setColumnSpan(addr1Field, 2);
-        coordinatesGrid.add(addr1Field, 1, 1);
+        VBox addr1Box = new VBox(2, addr1Field, resolvedLabel1);
+        GridPane.setColumnSpan(addr1Box, 2);
+        coordinatesGrid.add(addr1Box, 1, 1);
         coordinatesGrid.add(searchBtn1, 3, 1);
         coordinatesGrid.add(new Label("Lat:"), 0, 2);
         coordinatesGrid.add(lat1Field, 1, 2);
@@ -126,8 +131,9 @@ public class GpsAppGui extends Application {
 
         coordinatesGrid.add(coord2Label, 0, 3);
         coordinatesGrid.add(new Label("Search:"), 0, 4);
-        GridPane.setColumnSpan(addr2Field, 2);
-        coordinatesGrid.add(addr2Field, 1, 4);
+        VBox addr2Box = new VBox(2, addr2Field, resolvedLabel2);
+        GridPane.setColumnSpan(addr2Box, 2);
+        coordinatesGrid.add(addr2Box, 1, 4);
         coordinatesGrid.add(searchBtn2, 3, 4);
         coordinatesGrid.add(new Label("Lat:"), 0, 5);
         coordinatesGrid.add(lat2Field, 1, 5);
@@ -189,27 +195,30 @@ public class GpsAppGui extends Application {
         searchBtn1.setOnAction(e -> {
             String query = addr1Field.getText().trim();
             searchBtn1.setDisable(true);
-            Task<double[]> searchTask = new Task<>() {
+            Task<MapboxService.GeoResult> searchTask = new Task<>() {
                 @Override
-                protected double[] call() throws Exception {
+                protected MapboxService.GeoResult call() throws Exception {
                     return mapbox.forwardGeocode(query);
                 }
             };
             searchTask.setOnSucceeded(ev -> {
-                double[] result = searchTask.getValue();
+                MapboxService.GeoResult result = searchTask.getValue();
                 if (result == null) {
+                    resolvedLabel1.setText("Search result: Not found");
                     Alert alert = new Alert(Alert.AlertType.INFORMATION);
                     alert.setTitle("No results");
                     alert.setHeaderText(null);
                     alert.setContentText("No location found for \"" + query + "\".");
                     alert.showAndWait();
                 } else {
-                    lat1Field.setText(String.valueOf(result[0]));
-                    long1Field.setText(String.valueOf(result[1]));
+                    lat1Field.setText(String.valueOf(result.lat()));
+                    long1Field.setText(String.valueOf(result.lon()));
+                    resolvedLabel1.setText("Search result: " + result.placeName());
                 }
                 searchBtn1.setDisable(addr1Field.getText().trim().isEmpty());
             });
             searchTask.setOnFailed(ev -> {
+                resolvedLabel1.setText("Search result: Not found");
                 searchBtn1.setDisable(addr1Field.getText().trim().isEmpty());
                 Throwable ex = searchTask.getException();
                 Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -224,27 +233,30 @@ public class GpsAppGui extends Application {
         searchBtn2.setOnAction(e -> {
             String query = addr2Field.getText().trim();
             searchBtn2.setDisable(true);
-            Task<double[]> searchTask = new Task<>() {
+            Task<MapboxService.GeoResult> searchTask = new Task<>() {
                 @Override
-                protected double[] call() throws Exception {
+                protected MapboxService.GeoResult call() throws Exception {
                     return mapbox.forwardGeocode(query);
                 }
             };
             searchTask.setOnSucceeded(ev -> {
-                double[] result = searchTask.getValue();
+                MapboxService.GeoResult result = searchTask.getValue();
                 if (result == null) {
+                    resolvedLabel2.setText("Search result: Not found");
                     Alert alert = new Alert(Alert.AlertType.INFORMATION);
                     alert.setTitle("No results");
                     alert.setHeaderText(null);
                     alert.setContentText("No location found for \"" + query + "\".");
                     alert.showAndWait();
                 } else {
-                    lat2Field.setText(String.valueOf(result[0]));
-                    long2Field.setText(String.valueOf(result[1]));
+                    lat2Field.setText(String.valueOf(result.lat()));
+                    long2Field.setText(String.valueOf(result.lon()));
+                    resolvedLabel2.setText("Search result: " + result.placeName());
                 }
                 searchBtn2.setDisable(addr2Field.getText().trim().isEmpty());
             });
             searchTask.setOnFailed(ev -> {
+                resolvedLabel2.setText("Search result: Not found");
                 searchBtn2.setDisable(addr2Field.getText().trim().isEmpty());
                 Throwable ex = searchTask.getException();
                 Alert alert = new Alert(Alert.AlertType.ERROR);
