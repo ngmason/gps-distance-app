@@ -71,28 +71,9 @@ public class GpsAppGui extends Application {
         newRouteLayout.setPadding(new Insets(20));
         newRouteLayout.setStyle("-fx-background-color: #D3D3D3; -fx-border-radius: 20; -fx-background-radius: 20;");
 
-        // Coordinate inputs
-        // Section: Locations
-        Label coordsHdr = new Label("Locations");
-        coordsHdr.setStyle("-fx-font-size:14px; -fx-font-weight:bold;");
-
-        GridPane coordinatesGrid = new GridPane();
-        coordinatesGrid.setHgap(10);
-        coordinatesGrid.setVgap(8);
-
-        // Narrow label columns, wide text field columns
-        ColumnConstraints labelCol = new ColumnConstraints();
-        labelCol.setMinWidth(50);
-        labelCol.setHgrow(Priority.NEVER);
-
-        ColumnConstraints fieldCol = new ColumnConstraints();
-        fieldCol.setHgrow(Priority.ALWAYS);
-
-        coordinatesGrid.getColumnConstraints().setAll(
-            labelCol, fieldCol, labelCol, fieldCol
-        );
-
+        // Section: Locations (two cards, one per location)
         Label coord1Label = new Label("Location 1");
+        coord1Label.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
         TextField addr1Field = new TextField();
         addr1Field.setPromptText("e.g., Times Square, New York");
         Button searchBtn1 = new Button("Search");
@@ -106,6 +87,7 @@ public class GpsAppGui extends Application {
         TextField long1Field = new TextField();
 
         Label coord2Label = new Label("Location 2");
+        coord2Label.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
         TextField addr2Field = new TextField();
         addr2Field.setPromptText("e.g., Eiffel Tower, Paris");
         Button searchBtn2 = new Button("Search");
@@ -118,36 +100,37 @@ public class GpsAppGui extends Application {
         TextField lat2Field = new TextField();
         TextField long2Field = new TextField();
 
-        coordinatesGrid.add(coord1Label, 0, 0);
-        coordinatesGrid.add(new Label("Search:"), 0, 1);
-        VBox addr1Box = new VBox(2, addr1Field, resolvedLabel1);
-        GridPane.setColumnSpan(addr1Box, 2);
-        coordinatesGrid.add(addr1Box, 1, 1);
-        coordinatesGrid.add(searchBtn1, 3, 1);
-        coordinatesGrid.add(new Label("Lat:"), 0, 2);
-        coordinatesGrid.add(lat1Field, 1, 2);
-        coordinatesGrid.add(new Label("Long:"), 2, 2);
-        coordinatesGrid.add(long1Field, 3, 2);
+        HBox addrRow1 = new HBox(8, new Label("Address or place:"), addr1Field, searchBtn1);
+        HBox.setHgrow(addr1Field, Priority.ALWAYS);
+        addrRow1.setAlignment(Pos.CENTER_LEFT);
+        HBox coordRow1 = new HBox(8, new Label("Lat:"), lat1Field, new Label("Long:"), long1Field);
+        HBox.setHgrow(lat1Field, Priority.ALWAYS);
+        HBox.setHgrow(long1Field, Priority.ALWAYS);
+        coordRow1.setAlignment(Pos.CENTER_LEFT);
+        Label latHint1 = new Label("Latitude must be -90 to 90");
+        Label lonHint1 = new Label("Longitude must be -180 to 180");
+        latHint1.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
+        lonHint1.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
+        HBox hints1 = new HBox(16, latHint1, lonHint1);
+        VBox locationCard1 = new VBox(8, coord1Label, addrRow1, resolvedLabel1, coordRow1, hints1);
+        locationCard1.setPadding(new Insets(12));
+        locationCard1.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
 
-        coordinatesGrid.add(coord2Label, 0, 3);
-        coordinatesGrid.add(new Label("Search:"), 0, 4);
-        VBox addr2Box = new VBox(2, addr2Field, resolvedLabel2);
-        GridPane.setColumnSpan(addr2Box, 2);
-        coordinatesGrid.add(addr2Box, 1, 4);
-        coordinatesGrid.add(searchBtn2, 3, 4);
-        coordinatesGrid.add(new Label("Lat:"), 0, 5);
-        coordinatesGrid.add(lat2Field, 1, 5);
-        coordinatesGrid.add(new Label("Long:"), 2, 5);
-        coordinatesGrid.add(long2Field, 3, 5);
-
-        //Long and Lat hints
-        Label latHint = new Label("Latitude must be -90 to 90");
-        Label lonHint = new Label("Longitude must be -180 to 180");
-        latHint.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
-        lonHint.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
-
-        coordinatesGrid.add(latHint, 1, 6);
-        coordinatesGrid.add(lonHint, 3, 6);
+        HBox addrRow2 = new HBox(8, new Label("Address or place:"), addr2Field, searchBtn2);
+        HBox.setHgrow(addr2Field, Priority.ALWAYS);
+        addrRow2.setAlignment(Pos.CENTER_LEFT);
+        HBox coordRow2 = new HBox(8, new Label("Lat:"), lat2Field, new Label("Long:"), long2Field);
+        HBox.setHgrow(lat2Field, Priority.ALWAYS);
+        HBox.setHgrow(long2Field, Priority.ALWAYS);
+        coordRow2.setAlignment(Pos.CENTER_LEFT);
+        Label latHint2 = new Label("Latitude must be -90 to 90");
+        Label lonHint2 = new Label("Longitude must be -180 to 180");
+        latHint2.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
+        lonHint2.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
+        HBox hints2 = new HBox(16, latHint2, lonHint2);
+        VBox locationCard2 = new VBox(8, coord2Label, addrRow2, resolvedLabel2, coordRow2, hints2);
+        locationCard2.setPadding(new Insets(12));
+        locationCard2.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
 
         // Route name input
         Label nameLabel = new Label("Route name:");
@@ -165,7 +148,16 @@ public class GpsAppGui extends Application {
         // Button
         Button calculateBtn = new Button("Calculate distance");
         calculateBtn.setStyle("-fx-background-color: #00BFFF; -fx-text-fill: black; -fx-font-weight: bold;");
-        
+        calculateBtn.setMaxWidth(Double.MAX_VALUE);
+
+        Label routeOptionsHdr = new Label("Route Options");
+        routeOptionsHdr.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
+        VBox routeOptionsCard = new VBox(8,
+            routeOptionsHdr, nameLabel, nameField, speedLabel, speedDropdown, calculateBtn
+        );
+        routeOptionsCard.setPadding(new Insets(12));
+        routeOptionsCard.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
+
         // Summary grid
         Image mapImg = new Image(getClass().getResourceAsStream("/map_icon.png"));
         ImageView mapIcon = new ImageView(mapImg);
@@ -406,17 +398,22 @@ public class GpsAppGui extends Application {
             exportMapAsPng(mapPreview.getImage(), exportBtn1.getScene().getWindow())
         );
 
+        Label mapPreviewHdr = new Label("Map preview (dynamic)");
+        mapPreviewHdr.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
+        VBox mapCard = new VBox(8, mapPreviewHdr, mapPreview, exportBtn1);
+        mapCard.setPadding(new Insets(12));
+        mapCard.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
+
+        VBox outputCard = new VBox(12, summaryTitleBox, summaryGrid, detectedHdr, detectedGrid);
+        outputCard.setPadding(new Insets(12));
+        outputCard.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
+
         newRouteLayout.getChildren().addAll(
-            coordsHdr,
-            coordinatesGrid,
-            detectedHdr, detectedGrid,
-            nameLabel, nameField,
-            speedLabel, speedDropdown,
-            calculateBtn,
-            new Label("Map preview (dynamic)"),
-            mapPreview,
-            exportBtn1,
-            summaryTitleBox, summaryGrid
+            locationCard1,
+            locationCard2,
+            routeOptionsCard,
+            mapCard,
+            outputCard
         );
         ScrollPane scrollPane = new ScrollPane(newRouteLayout);
         scrollPane.setFitToWidth(true);
@@ -427,8 +424,8 @@ public class GpsAppGui extends Application {
         previousRouteLayout.setPadding(new Insets(20));
         previousRouteLayout.setStyle("-fx-background-color: #9ec7eaff; -fx-border-radius: 20; -fx-background-radius: 20;");
 
-        Label pickLabel = new Label("Pick a Route:");
-        pickLabel.setStyle("-fx-font-size:14px; -fx-font-weight:bold;");
+        //Label pickLabel = new Label("Pick a Route:");
+        //pickLabel.setStyle("-fx-font-size:14px; -fx-font-weight:bold;");
         
         routeComboBox.setPromptText("Select saved route...");
 
@@ -541,10 +538,27 @@ public class GpsAppGui extends Application {
             exportMapAsPng(mapPreview2.getImage(), exportBtn2.getScene().getWindow())
         );
 
-        previousRouteLayout.getChildren().addAll(pickLabel, routeComboBox, new Label("Map preview (static)"), mapPreview2,
-            exportBtn2, summaryTitleBox2, summaryGrid2);
+        Label pickRouteHdr = new Label("Pick a Route");
+        pickRouteHdr.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
+        VBox pickCard = new VBox(8, pickRouteHdr, routeComboBox);
+        pickCard.setPadding(new Insets(12));
+        pickCard.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
+
+        Label mapPreviewHdr2 = new Label("Map preview (static)");
+        mapPreviewHdr2.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
+        VBox mapAndExport2 = new VBox(4, mapPreview2, exportBtn2);
+        VBox mapCard2 = new VBox(8, mapPreviewHdr2, mapAndExport2);
+        mapCard2.setPadding(new Insets(12));
+        mapCard2.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
+
+        VBox outputCard2 = new VBox(12, summaryTitleBox2, summaryGrid2);
+        outputCard2.setPadding(new Insets(12));
+        outputCard2.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
+
+        previousRouteLayout.getChildren().addAll(pickCard, mapCard2, outputCard2);
         ScrollPane prevScrollPane = new ScrollPane(previousRouteLayout);
         prevScrollPane.setFitToWidth(true);
+        prevScrollPane.setStyle("-fx-background-color: #9ec7eaff;");
         previousRouteTab.setContent(prevScrollPane);
 
 
