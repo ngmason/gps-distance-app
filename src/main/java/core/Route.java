@@ -1,5 +1,9 @@
 package core;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Route class to hold information about a gps route.
  * @author Nina Mason
@@ -8,8 +12,7 @@ package core;
 
 public class Route {
 
-    private Location start;
-    private Location end;
+    private List<Location> locations;
     private double distanceKm;
     private double distanceMiles;
     private double timeHrs;
@@ -17,31 +20,46 @@ public class Route {
 
     final static double R = 6371.0;
 
-    public Route(Location start, Location end, double mph, String name) {
-        this.start = start;
-        this.end = end;
-        double[] distances = haversine(start.getLatitude(), start.getLongitude(), end.getLatitude(), end.getLongitude());
-        this.distanceKm = distances[0];
-        this.distanceMiles = distances[1];
-        this.timeHrs = calculateTime(distanceMiles, mph);
+    public Route(List<Location> locations, double mph, String name) {
+        this.locations = new ArrayList<>(locations);
         this.name = name;
+        double totalKm = 0;
+        for (int i = 0; i < locations.size() - 1; i++) {
+            Location a = locations.get(i);
+            Location b = locations.get(i + 1);
+            totalKm += haversine(a.getLatitude(), a.getLongitude(), b.getLatitude(), b.getLongitude())[0];
+        }
+        this.distanceKm = totalKm;
+        this.distanceMiles = totalKm * 0.621371;
+        this.timeHrs = calculateTime(distanceMiles, mph);
     }
 
-    public Route(Location start, Location end, double distanceKm, double distanceMiles, double timeHrs, String name) {
-        this.start = start;
-        this.end = end;
+    public Route(List<Location> locations, double distanceKm, double distanceMiles, double timeHrs, String name) {
+        this.locations = new ArrayList<>(locations);
         this.distanceKm = distanceKm;
         this.distanceMiles = distanceMiles;
         this.timeHrs = timeHrs;
         this.name = name;
     }
 
+    public Route(Location start, Location end, double mph, String name) {
+        this(List.of(start, end), mph, name);
+    }
+
+    public Route(Location start, Location end, double distanceKm, double distanceMiles, double timeHrs, String name) {
+        this(List.of(start, end), distanceKm, distanceMiles, timeHrs, name);
+    }
+
+    public List<Location> getWaypoints() {
+        return Collections.unmodifiableList(locations);
+    }
+
     public Location getStart() {
-        return start;
+        return locations.get(0);
     }
 
     public Location getEnd() {
-        return end;
+        return locations.get(locations.size() - 1);
     }
 
     public double getDistanceKm() {
