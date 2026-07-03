@@ -3,6 +3,7 @@ package core;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.List;
 import org.json.*;
 
 public class RouteLoader {
@@ -44,13 +45,12 @@ public class RouteLoader {
                 double timeHrs = jsonRoute.getDouble("time");
 
                 JSONArray path = jsonRoute.getJSONArray("path");
-                JSONObject start = path.getJSONObject(0);
-                JSONObject end = path.getJSONObject(1);
-
-                Location startLoc = new Location(start.getString("name"), start.getDouble("latitude"), start.getDouble("longitude"));
-                Location endLoc = new Location(end.getString("name"), end.getDouble("latitude"), end.getDouble("longitude"));
-
-                routes.add(new Route(startLoc, endLoc, distanceKm, distanceMiles, timeHrs, name));
+                List<Location> locs = new ArrayList<>();
+                for (int j = 0; j < path.length(); j++) {
+                    JSONObject loc = path.getJSONObject(j);
+                    locs.add(new Location(loc.getString("name"), loc.getDouble("latitude"), loc.getDouble("longitude")));
+                }
+                routes.add(new Route(locs, distanceKm, distanceMiles, timeHrs, name));
             }
 
         } catch (Exception e) {
@@ -82,18 +82,13 @@ public class RouteLoader {
                 jsonRoute.put("time", route.getTimeHrs());
 
                 JSONArray pathArray = new JSONArray();
-
-                JSONObject startObject = new JSONObject();
-                startObject.put("name", route.getStart().getName());
-                startObject.put("latitude", route.getStart().getLatitude());
-                startObject.put("longitude", route.getStart().getLongitude());
-                pathArray.put(startObject);
-
-                JSONObject endObject = new JSONObject();
-                endObject.put("name", route.getEnd().getName());
-                endObject.put("latitude", route.getEnd().getLatitude());
-                endObject.put("longitude", route.getEnd().getLongitude());
-                pathArray.put(endObject);
+                for (Location loc : route.getWaypoints()) {
+                    JSONObject locObject = new JSONObject();
+                    locObject.put("name", loc.getName());
+                    locObject.put("latitude", loc.getLatitude());
+                    locObject.put("longitude", loc.getLongitude());
+                    pathArray.put(locObject);
+                }
 
                 jsonRoute.put("path", pathArray);
                 jsonRoutes.put(jsonRoute);
