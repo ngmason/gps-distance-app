@@ -1,35 +1,37 @@
 # GPS Distance Calculator (Java)
 
-A Java/JavaFX application that calculates distances between coordinates, estimates travel time, and renders real routes dynamically using the Mapbox Directions + Static Maps API. Includes persistent route storage, a clean UI, and full CLI support.
+A Java/JavaFX application that calculates distances along multi-waypoint routes, estimates travel time, and renders real driving routes dynamically using the Mapbox Directions + Static Maps API. Supports routes with 2 or more stops. Includes persistent route storage, a clean UI, and full CLI support.
 
 ---
 
 ## 🌟 Features
 
 - Dynamic Route Mapping
-   - Draws real driving routes between two coordinates using Mapbox's Directions API
-   - Visualizes the route using Mapbox Static Maps
+   - Draws real driving routes through 2 or more coordinates using Mapbox's Directions API
+   - Visualizes the route using Mapbox Static Maps with color-coded pins (red start, orange stops, blue end)
    - Automatically encodes & draws polylines
-   - Auto-adjusting zoom level for long vs. short routes
+   - Auto-adjusting zoom level based on the bounding box of all waypoints
 
 - Interactive JavaFX GUI
    - Enter coordinates directly or search by address or place name; address search uses the Mapbox Geocoding API and populates the latitude and longitude fields automatically
    - Resolved place name shown below each search field immediately after Search (e.g., `"Search result: Red Rocks Amphitheatre, Morrison, Colorado"`); latitude and longitude fields remain directly editable and are always the source of truth for Calculate
    - Card-based layout groups related controls into distinct visual sections: location inputs, route options, map preview, and route output
+   - Click "+ Add Stop" to add additional waypoint cards (Location 3, Location 4, …); each card has its own address search and lat/lon fields
+   - Calculate uses all location cards in order; total distance is the sum across all legs
    - Live-updating map preview
-   - Saved routes dropdown now regenerates the map dynamically
+   - Saved routes dropdown regenerates the map dynamically; waypoint names are listed in the output card
    - Route summary includes:
       - Distance (km & miles)
       - Travel time
       - Selected speed
    - Export the current map preview as a PNG from either tab (FileChooser dialog; `.png` extension appended automatically if omitted)
-   - After Calculate, reverse geocoding identifies canonical place names for both coordinates; results appear in a "Resolved Places" section
+   - After Calculate, reverse geocoding identifies canonical place names for all waypoints; results appear in a "Resolved Places" section
 
 - Route Persistence
    - Saved to saved_routes.json
-   - Route locations stored with detected place names rather than generic labels
-   - Overwrite/rename/duplicate detection
-   - Loads instantly into the GUI on startup
+   - All waypoints (not just start and end) stored with reverse-geocoded place names
+   - Overwrite/rename/duplicate detection (compares all waypoints)
+   - Loads instantly into the GUI on startup; multi-waypoint routes display correctly in the Previous Route tab
 
 - CLI Mode
    - Fast terminal-based route calculation
@@ -45,15 +47,14 @@ A Java/JavaFX application that calculates distances between coordinates, estimat
 
 ## 📸 Screenshots
 
-![Enter New Route Tab](screenshots/New-UI-1.png)
+![Enter New Route Tab](screenshots/GPS_Calculator_UI_1.png)
 
-![Enter New Route Tab Map](screenshots/New-UI-2.png)
+![Enter New Route Tab Map](screenshots/GPS_Calculator_UI_2.png)
 
-![Enter New Route Tab w/ Data](screenshots/New-UI-3.png)
+![Enter New Route Tab w/ Data](screenshots/GPS_Calculator_UI_3.png)
 
-![Enter New Route Tab Map w/ Data](screenshots/New-UI-4.png)
+![Select Previous Route Tab Map w/ Data](screenshots/GPS_Calculator_UI_4.png)
 
-![Select Previous Route Tab w/ Data](screenshots/New-UI-5.png)
 ---
 
 ## 📦 Dependencies
@@ -109,6 +110,5 @@ src/main/resources/config.properties
 
 ---
 ## 🧩 Coming Soon (Future Enhancements)
-- Support for multi-waypoint routes
 - User-clickable map for coordinate selection
 - Dark-mode map styles
