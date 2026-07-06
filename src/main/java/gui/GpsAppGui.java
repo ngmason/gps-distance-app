@@ -169,30 +169,21 @@ public class GpsAppGui extends Application {
         detectedGrid.setVgap(10);
         detectedGrid.setPadding(new Insets(10));
 
-        Label placeName1Label = new Label("Not detected yet");
-        placeName1Label.setWrapText(true);
-        Label placeName2Label = new Label("Not detected yet");
-        placeName2Label.setWrapText(true);
-
-        detectedGrid.add(new Label("Location 1:"), 0, 0);
-        detectedGrid.add(placeName1Label, 1, 0);
-        detectedGrid.add(new Label("Location 2:"), 0, 1);
-        detectedGrid.add(placeName2Label, 1, 1);
-
         calculateBtn.setOnAction(e -> {
-            double lat1, lon1, lat2, lon2;
-            try {
-                lat1 = Double.parseDouble(card1.latField.getText());
-                lon1 = Double.parseDouble(card1.lonField.getText());
-                lat2 = Double.parseDouble(card2.latField.getText());
-                lon2 = Double.parseDouble(card2.lonField.getText());
-            } catch (NumberFormatException ex) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Input Error");
-                alert.setHeaderText("Invalid Input");
-                alert.setContentText("Please enter valid numbers for all coordinates!");
-                alert.showAndWait();
-                return;
+            List<double[]> coords = new ArrayList<>();
+            for (LocationCard lc : locationCards) {
+                try {
+                    double lat = Double.parseDouble(lc.latField.getText());
+                    double lon = Double.parseDouble(lc.lonField.getText());
+                    coords.add(new double[]{lat, lon});
+                } catch (NumberFormatException ex) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Input Error");
+                    alert.setHeaderText("Invalid Input");
+                    alert.setContentText("Please enter valid numbers for all coordinates!");
+                    alert.showAndWait();
+                    return;
+                }
             }
 
             double speed = speedDropdown.getValue();
@@ -200,34 +191,38 @@ public class GpsAppGui extends Application {
                     ? "Untitled Route"
                     : nameField.getText().trim();
 
-            placeName1Label.setText("Detecting...");
-            placeName2Label.setText("Detecting...");
+            detectedGrid.getChildren().clear();
+            detectedGrid.add(new Label("Detecting..."), 0, 0);
             calculateBtn.setDisable(true);
 
-            final double fLat1 = lat1, fLon1 = lon1, fLat2 = lat2, fLon2 = lon2;
-
-            Task<String[]> task = new Task<>() {
+            Task<RouteCalcResult> task = new Task<>() {
                 @Override
-                protected String[] call() throws Exception {
-                    String name1 = mapbox.reverseGeocode(fLon1, fLat1);
-                    String name2 = mapbox.reverseGeocode(fLon2, fLat2);
-                    String polyline = mapbox.getEncodedPolyline(fLon1, fLat1, fLon2, fLat2);
-                    return new String[]{ name1, name2, polyline };
+                protected RouteCalcResult call() throws Exception {
+                    List<Location> locations = new ArrayList<>();
+                    for (int i = 0; i < coords.size(); i++) {
+                        double[] pair = coords.get(i);
+                        String name = mapbox.reverseGeocode(pair[1], pair[0]);
+                        String fallback = (i == 0) ? "Start" : (i == coords.size() - 1) ? "End" : "Stop " + i;
+                        locations.add(new Location(name != null ? name : fallback, pair[0], pair[1]));
+                    }
+                    String polyline = mapbox.getEncodedPolyline(locations);
+                    return new RouteCalcResult(locations, polyline);
                 }
             };
 
             task.setOnSucceeded(ev -> {
-                String[] results = task.getValue();
-                String name1 = results[0] != null ? results[0] : "Start";
-                String name2 = results[1] != null ? results[1] : "End";
-                String polyline = results[2];
+                List<Location> locations = task.getValue().locations();
+                String polyline = task.getValue().polyline();
 
-                placeName1Label.setText(name1);
-                placeName2Label.setText(name2);
+                detectedGrid.getChildren().clear();
+                for (int i = 0; i < locations.size(); i++) {
+                    detectedGrid.add(new Label("Location " + (i + 1) + ":"), 0, i);
+                    Label placeLabel = new Label(locations.get(i).getName());
+                    placeLabel.setWrapText(true);
+                    detectedGrid.add(placeLabel, 1, i);
+                }
 
-                Location loc1 = new Location(name1, fLat1, fLon1);
-                Location loc2 = new Location(name2, fLat2, fLon2);
-                Route newRoute = new Route(loc1, loc2, speed, routeName);
+                Route newRoute = new Route(locations, speed, routeName);
 
                 boolean saved = addRouteWithDuplicateChecks(newRoute, calculateBtn.getScene().getWindow());
                 if (saved) {
@@ -242,26 +237,29 @@ public class GpsAppGui extends Application {
                     refreshRouteDropdown(routeComboBox);
                 }
 
-                lonA = fLon1;
-                latA = fLat1;
-                lonB = fLon2;
-                latB = fLat2;
+                lonA = locations.get(0).getLongitude();
+                latA = locations.get(0).getLatitude();
+                lonB = locations.get(locations.size() - 1).getLongitude();
+                latB = locations.get(locations.size() - 1).getLatitude();
 
-                centerLon = (lonA + lonB) / 2.0;
-                centerLat = (latA + latB) / 2.0;
-                zoom = calculateZoomLevel(latA, lonA, latB, lonB);
+                double sumLat = 0, sumLon = 0;
+                for (Location loc : locations) { sumLat += loc.getLatitude(); sumLon += loc.getLongitude(); }
+                centerLon = sumLon / locations.size();
+                centerLat = sumLat / locations.size();
+                zoom = calculateZoomLevel(locations);
 
-                String mapUrl = mapbox.buildStaticMapUrl(
-                        polyline, lonA, latA, lonB, latB, centerLon, centerLat, zoom
-                );
+                String mapUrl = mapbox.buildStaticMapUrl(polyline, locations, centerLon, centerLat, zoom);
                 mapPreview.setImage(new Image(mapUrl, 600, 400, false, false));
 
                 calculateBtn.setDisable(false);
             });
 
             task.setOnFailed(ev -> {
-                placeName1Label.setText("Not detected yet");
-                placeName2Label.setText("Not detected yet");
+                detectedGrid.getChildren().clear();
+                for (int i = 0; i < locationCards.size(); i++) {
+                    detectedGrid.add(new Label("Location " + (i + 1) + ":"), 0, i);
+                    detectedGrid.add(new Label("Not detected yet"), 1, i);
+                }
                 calculateBtn.setDisable(false);
                 Throwable ex = task.getException();
                 Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -544,11 +542,14 @@ public class GpsAppGui extends Application {
         return Math.abs(a - b) < EPS;
     }
 
-    private boolean coordinatesMatch(Route r, double lat1, double lon1, double lat2, double lon2) {
-        return  coordsEqual(r.getStart().getLatitude(),  lat1) &&
-                coordsEqual(r.getStart().getLongitude(), lon1) &&
-                coordsEqual(r.getEnd().getLatitude(),    lat2) &&
-                coordsEqual(r.getEnd().getLongitude(),   lon2);
+    private boolean coordinatesMatch(Route r, List<Location> coords) {
+        List<Location> waypoints = r.getWaypoints();
+        if (waypoints.size() != coords.size()) return false;
+        for (int i = 0; i < coords.size(); i++) {
+            if (!coordsEqual(waypoints.get(i).getLatitude(),  coords.get(i).getLatitude()) ||
+                !coordsEqual(waypoints.get(i).getLongitude(), coords.get(i).getLongitude())) return false;
+        }
+        return true;
     }
 
     /**
@@ -562,13 +563,10 @@ public class GpsAppGui extends Application {
         ArrayList<Route> currentRoutes = RouteLoader.loadRoutes(SAVE_FILE_PATH);
 
         String routeName = newRoute.getName();
-        double lat1 = newRoute.getStart().getLatitude();
-        double lon1 = newRoute.getStart().getLongitude();
-        double lat2 = newRoute.getEnd().getLatitude();
-        double lon2 = newRoute.getEnd().getLongitude();
+        List<Location> newWaypoints = newRoute.getWaypoints();
 
         boolean coordsExist = currentRoutes.stream()
-            .anyMatch(r -> coordinatesMatch(r, lat1, lon1, lat2, lon2));
+            .anyMatch(r -> coordinatesMatch(r, newWaypoints));
         if (coordsExist) {
             Alert warn = new Alert(Alert.AlertType.INFORMATION);
             warn.initOwner(owner);
@@ -655,6 +653,18 @@ public class GpsAppGui extends Application {
      * @param lonB, the longitude of coordinate B
      * @return int, the level of zoom the map needs based on the Haversine distance
     */
+    private int calculateZoomLevel(List<Location> locations) {
+        double minLat = Double.MAX_VALUE, maxLat = -Double.MAX_VALUE;
+        double minLon = Double.MAX_VALUE, maxLon = -Double.MAX_VALUE;
+        for (Location loc : locations) {
+            if (loc.getLatitude()  < minLat) minLat = loc.getLatitude();
+            if (loc.getLatitude()  > maxLat) maxLat = loc.getLatitude();
+            if (loc.getLongitude() < minLon) minLon = loc.getLongitude();
+            if (loc.getLongitude() > maxLon) maxLon = loc.getLongitude();
+        }
+        return calculateZoomLevel(minLat, minLon, maxLat, maxLon);
+    }
+
     private int calculateZoomLevel(double latA, double lonA, double latB, double lonB) {
         double distanceMiles = Route.haversine(latA, lonA, latB, lonB)[1];
 
@@ -664,6 +674,8 @@ public class GpsAppGui extends Application {
         if (distanceMiles < 1000) return 4;
         return 3;
     }
+
+    private record RouteCalcResult(List<Location> locations, String polyline) {}
 
     private static class LocationCard {
         final Label headerLabel;
