@@ -24,6 +24,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.stage.FileChooser;
@@ -73,6 +74,8 @@ public class GpsAppGui extends Application {
 
         LocationCard card1 = new LocationCard("Location 1", "e.g., Times Square, New York");
         LocationCard card2 = new LocationCard("Location 2", "e.g., Eiffel Tower, Paris");
+        List<LocationCard> locationCards = new ArrayList<>(List.of(card1, card2));
+        VBox waypointsContainer = new VBox(16, card1.card, card2.card);
 
         // Route name input
         Label nameLabel = new Label("Route name:");
@@ -128,6 +131,15 @@ public class GpsAppGui extends Application {
 
         wireSearchHandler(card1, mapbox);
         wireSearchHandler(card2, mapbox);
+
+        Button addStopBtn = new Button("+ Add Stop");
+        addStopBtn.setOnAction(e -> {
+            int locationNumber = locationCards.size() + 1;
+            LocationCard newCard = new LocationCard("Location " + locationNumber, "e.g., Denver, CO");
+            wireSearchHandler(newCard, mapbox);
+            locationCards.add(newCard);
+            waypointsContainer.getChildren().add(newCard.card);
+        });
 
         try {
             String polyline = mapbox.getEncodedPolyline(lonA, latA, lonB, latB);
@@ -278,8 +290,8 @@ public class GpsAppGui extends Application {
         outputCard.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
 
         newRouteLayout.getChildren().addAll(
-            card1.card,
-            card2.card,
+            waypointsContainer,
+            addStopBtn,
             routeOptionsCard,
             mapCard,
             outputCard
