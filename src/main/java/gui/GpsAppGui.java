@@ -71,66 +71,8 @@ public class GpsAppGui extends Application {
         newRouteLayout.setPadding(new Insets(20));
         newRouteLayout.setStyle("-fx-background-color: #D3D3D3; -fx-border-radius: 20; -fx-background-radius: 20;");
 
-        // Section: Locations (two cards, one per location)
-        Label coord1Label = new Label("Location 1");
-        coord1Label.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
-        TextField addr1Field = new TextField();
-        addr1Field.setPromptText("e.g., Times Square, New York");
-        Button searchBtn1 = new Button("Search");
-        searchBtn1.setDisable(true);
-        addr1Field.textProperty().addListener((obs, oldV, newV) ->
-            searchBtn1.setDisable(newV.trim().isEmpty())
-        );
-        Label resolvedLabel1 = new Label("");
-        resolvedLabel1.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
-        TextField lat1Field = new TextField();
-        TextField long1Field = new TextField();
-
-        Label coord2Label = new Label("Location 2");
-        coord2Label.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
-        TextField addr2Field = new TextField();
-        addr2Field.setPromptText("e.g., Eiffel Tower, Paris");
-        Button searchBtn2 = new Button("Search");
-        searchBtn2.setDisable(true);
-        addr2Field.textProperty().addListener((obs, oldV, newV) ->
-            searchBtn2.setDisable(newV.trim().isEmpty())
-        );
-        Label resolvedLabel2 = new Label("");
-        resolvedLabel2.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
-        TextField lat2Field = new TextField();
-        TextField long2Field = new TextField();
-
-        HBox addrRow1 = new HBox(8, new Label("Address or place:"), addr1Field, searchBtn1);
-        HBox.setHgrow(addr1Field, Priority.ALWAYS);
-        addrRow1.setAlignment(Pos.CENTER_LEFT);
-        HBox coordRow1 = new HBox(8, new Label("Lat:"), lat1Field, new Label("Long:"), long1Field);
-        HBox.setHgrow(lat1Field, Priority.ALWAYS);
-        HBox.setHgrow(long1Field, Priority.ALWAYS);
-        coordRow1.setAlignment(Pos.CENTER_LEFT);
-        Label latHint1 = new Label("Latitude must be -90 to 90");
-        Label lonHint1 = new Label("Longitude must be -180 to 180");
-        latHint1.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
-        lonHint1.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
-        HBox hints1 = new HBox(16, latHint1, lonHint1);
-        VBox locationCard1 = new VBox(8, coord1Label, addrRow1, resolvedLabel1, coordRow1, hints1);
-        locationCard1.setPadding(new Insets(12));
-        locationCard1.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
-
-        HBox addrRow2 = new HBox(8, new Label("Address or place:"), addr2Field, searchBtn2);
-        HBox.setHgrow(addr2Field, Priority.ALWAYS);
-        addrRow2.setAlignment(Pos.CENTER_LEFT);
-        HBox coordRow2 = new HBox(8, new Label("Lat:"), lat2Field, new Label("Long:"), long2Field);
-        HBox.setHgrow(lat2Field, Priority.ALWAYS);
-        HBox.setHgrow(long2Field, Priority.ALWAYS);
-        coordRow2.setAlignment(Pos.CENTER_LEFT);
-        Label latHint2 = new Label("Latitude must be -90 to 90");
-        Label lonHint2 = new Label("Longitude must be -180 to 180");
-        latHint2.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
-        lonHint2.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
-        HBox hints2 = new HBox(16, latHint2, lonHint2);
-        VBox locationCard2 = new VBox(8, coord2Label, addrRow2, resolvedLabel2, coordRow2, hints2);
-        locationCard2.setPadding(new Insets(12));
-        locationCard2.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
+        LocationCard card1 = new LocationCard("Location 1", "e.g., Times Square, New York");
+        LocationCard card2 = new LocationCard("Location 2", "e.g., Eiffel Tower, Paris");
 
         // Route name input
         Label nameLabel = new Label("Route name:");
@@ -184,81 +126,8 @@ public class GpsAppGui extends Application {
         String token = MapboxService.loadToken();
         MapboxService mapbox = new MapboxService();
 
-        searchBtn1.setOnAction(e -> {
-            String query = addr1Field.getText().trim();
-            searchBtn1.setDisable(true);
-            Task<MapboxService.GeoResult> searchTask = new Task<>() {
-                @Override
-                protected MapboxService.GeoResult call() throws Exception {
-                    return mapbox.forwardGeocode(query);
-                }
-            };
-            searchTask.setOnSucceeded(ev -> {
-                MapboxService.GeoResult result = searchTask.getValue();
-                if (result == null) {
-                    resolvedLabel1.setText("Search result: Not found");
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("No results");
-                    alert.setHeaderText(null);
-                    alert.setContentText("No location found for \"" + query + "\".");
-                    alert.showAndWait();
-                } else {
-                    lat1Field.setText(String.valueOf(result.lat()));
-                    long1Field.setText(String.valueOf(result.lon()));
-                    resolvedLabel1.setText("Search result: " + result.placeName());
-                }
-                searchBtn1.setDisable(addr1Field.getText().trim().isEmpty());
-            });
-            searchTask.setOnFailed(ev -> {
-                resolvedLabel1.setText("Search result: Not found");
-                searchBtn1.setDisable(addr1Field.getText().trim().isEmpty());
-                Throwable ex = searchTask.getException();
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Search failed");
-                alert.setHeaderText("Could not search for location");
-                alert.setContentText(ex != null ? ex.getMessage() : "An unexpected error occurred.");
-                alert.showAndWait();
-            });
-            new Thread(searchTask).start();
-        });
-
-        searchBtn2.setOnAction(e -> {
-            String query = addr2Field.getText().trim();
-            searchBtn2.setDisable(true);
-            Task<MapboxService.GeoResult> searchTask = new Task<>() {
-                @Override
-                protected MapboxService.GeoResult call() throws Exception {
-                    return mapbox.forwardGeocode(query);
-                }
-            };
-            searchTask.setOnSucceeded(ev -> {
-                MapboxService.GeoResult result = searchTask.getValue();
-                if (result == null) {
-                    resolvedLabel2.setText("Search result: Not found");
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("No results");
-                    alert.setHeaderText(null);
-                    alert.setContentText("No location found for \"" + query + "\".");
-                    alert.showAndWait();
-                } else {
-                    lat2Field.setText(String.valueOf(result.lat()));
-                    long2Field.setText(String.valueOf(result.lon()));
-                    resolvedLabel2.setText("Search result: " + result.placeName());
-                }
-                searchBtn2.setDisable(addr2Field.getText().trim().isEmpty());
-            });
-            searchTask.setOnFailed(ev -> {
-                resolvedLabel2.setText("Search result: Not found");
-                searchBtn2.setDisable(addr2Field.getText().trim().isEmpty());
-                Throwable ex = searchTask.getException();
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Search failed");
-                alert.setHeaderText("Could not search for location");
-                alert.setContentText(ex != null ? ex.getMessage() : "An unexpected error occurred.");
-                alert.showAndWait();
-            });
-            new Thread(searchTask).start();
-        });
+        wireSearchHandler(card1, mapbox);
+        wireSearchHandler(card2, mapbox);
 
         try {
             String polyline = mapbox.getEncodedPolyline(lonA, latA, lonB, latB);
@@ -301,10 +170,10 @@ public class GpsAppGui extends Application {
         calculateBtn.setOnAction(e -> {
             double lat1, lon1, lat2, lon2;
             try {
-                lat1 = Double.parseDouble(lat1Field.getText());
-                lon1 = Double.parseDouble(long1Field.getText());
-                lat2 = Double.parseDouble(lat2Field.getText());
-                lon2 = Double.parseDouble(long2Field.getText());
+                lat1 = Double.parseDouble(card1.latField.getText());
+                lon1 = Double.parseDouble(card1.lonField.getText());
+                lat2 = Double.parseDouble(card2.latField.getText());
+                lon2 = Double.parseDouble(card2.lonField.getText());
             } catch (NumberFormatException ex) {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Input Error");
@@ -409,8 +278,8 @@ public class GpsAppGui extends Application {
         outputCard.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
 
         newRouteLayout.getChildren().addAll(
-            locationCard1,
-            locationCard2,
+            card1.card,
+            card2.card,
             routeOptionsCard,
             mapCard,
             outputCard
@@ -765,8 +634,8 @@ public class GpsAppGui extends Application {
         return result.map(String::trim).filter(s -> !s.isEmpty()).orElse(null);
     }
 
-    /** 
-     * This function uses the Haversine formula to calculate distance and 
+    /**
+     * This function uses the Haversine formula to calculate distance and
      * the amount of zoom for the map based on the distance.
      * @param latA, the latitude of coordinate A
      * @param lonA, the longitude of coordinate A
@@ -782,6 +651,87 @@ public class GpsAppGui extends Application {
         if (distanceMiles < 50) return 6;
         if (distanceMiles < 1000) return 4;
         return 3;
+    }
+
+    private static class LocationCard {
+        final Label headerLabel;
+        final TextField addrField;
+        final Button searchBtn;
+        final Label resolvedLabel;
+        final TextField latField;
+        final TextField lonField;
+        final VBox card;
+
+        LocationCard(String header, String promptText) {
+            headerLabel = new Label(header);
+            headerLabel.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
+            addrField = new TextField();
+            addrField.setPromptText(promptText);
+            searchBtn = new Button("Search");
+            searchBtn.setDisable(true);
+            addrField.textProperty().addListener((obs, oldV, newV) ->
+                searchBtn.setDisable(newV.trim().isEmpty()));
+            resolvedLabel = new Label("");
+            resolvedLabel.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
+            latField = new TextField();
+            lonField = new TextField();
+
+            HBox addrRow = new HBox(8, new Label("Address or place:"), addrField, searchBtn);
+            HBox.setHgrow(addrField, Priority.ALWAYS);
+            addrRow.setAlignment(Pos.CENTER_LEFT);
+            HBox coordRow = new HBox(8, new Label("Lat:"), latField, new Label("Long:"), lonField);
+            HBox.setHgrow(latField, Priority.ALWAYS);
+            HBox.setHgrow(lonField, Priority.ALWAYS);
+            coordRow.setAlignment(Pos.CENTER_LEFT);
+            Label latHint = new Label("Latitude must be -90 to 90");
+            Label lonHint = new Label("Longitude must be -180 to 180");
+            latHint.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
+            lonHint.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
+            HBox hints = new HBox(16, latHint, lonHint);
+            card = new VBox(8, headerLabel, addrRow, resolvedLabel, coordRow, hints);
+            card.setPadding(new Insets(12));
+            card.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
+        }
+    }
+
+    private void wireSearchHandler(LocationCard card, MapboxService mapbox) {
+        card.searchBtn.setOnAction(e -> {
+            String query = card.addrField.getText().trim();
+            card.searchBtn.setDisable(true);
+            Task<MapboxService.GeoResult> searchTask = new Task<>() {
+                @Override
+                protected MapboxService.GeoResult call() throws Exception {
+                    return mapbox.forwardGeocode(query);
+                }
+            };
+            searchTask.setOnSucceeded(ev -> {
+                MapboxService.GeoResult result = searchTask.getValue();
+                if (result == null) {
+                    card.resolvedLabel.setText("Search result: Not found");
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("No results");
+                    alert.setHeaderText(null);
+                    alert.setContentText("No location found for \"" + query + "\".");
+                    alert.showAndWait();
+                } else {
+                    card.latField.setText(String.valueOf(result.lat()));
+                    card.lonField.setText(String.valueOf(result.lon()));
+                    card.resolvedLabel.setText("Search result: " + result.placeName());
+                }
+                card.searchBtn.setDisable(card.addrField.getText().trim().isEmpty());
+            });
+            searchTask.setOnFailed(ev -> {
+                card.resolvedLabel.setText("Search result: Not found");
+                card.searchBtn.setDisable(card.addrField.getText().trim().isEmpty());
+                Throwable ex = searchTask.getException();
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Search failed");
+                alert.setHeaderText("Could not search for location");
+                alert.setContentText(ex != null ? ex.getMessage() : "An unexpected error occurred.");
+                alert.showAndWait();
+            });
+            new Thread(searchTask).start();
+        });
     }
 
 }
