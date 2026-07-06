@@ -331,6 +331,10 @@ public class GpsAppGui extends Application {
         summaryGrid2.setHgap(15);
         summaryGrid2.setPadding(new Insets(10));
 
+        GridPane waypointsGrid2 = new GridPane();
+        waypointsGrid2.setHgap(15);
+        waypointsGrid2.setVgap(6);
+
         try {
             String polyline2 = mapbox.getEncodedPolyline(lonA, latA, lonB, latB);
             String mapUrl2 = mapbox.buildStaticMapUrl(polyline2, lonA, latA, lonB, latB, centerLon, centerLat, zoom);
@@ -373,33 +377,19 @@ public class GpsAppGui extends Application {
             if (selected == null) return;
 
             try {
-                // Extract coordinates
-                prevLatA = selected.getStart().getLatitude();
-                prevLonA = selected.getStart().getLongitude();
-                prevLatB = selected.getEnd().getLatitude();
-                prevLonB = selected.getEnd().getLongitude();
+                List<Location> waypoints = selected.getWaypoints();
 
-                // Generate polyline
-                String polyline = mapbox.getEncodedPolyline(prevLonA, prevLatA, prevLonB, prevLatB);
+                String polyline = mapbox.getEncodedPolyline(waypoints);
 
-                // Auto-calculate center + zoom
-                prevCenterLon = (prevLonA + prevLonB) / 2.0;
-                prevCenterLat = (prevLatA + prevLatB) / 2.0;
-                prevZoom = calculateZoomLevel(prevLatA, prevLonA, prevLatB, prevLonB);
+                double sumLat = 0, sumLon = 0;
+                for (Location loc : waypoints) { sumLat += loc.getLatitude(); sumLon += loc.getLongitude(); }
+                prevCenterLon = sumLon / waypoints.size();
+                prevCenterLat = sumLat / waypoints.size();
+                prevZoom = calculateZoomLevel(waypoints);
 
-                // Build map URL
-                String mapUrl = mapbox.buildStaticMapUrl(
-                    polyline,
-                    prevLonA, prevLatA,
-                    prevLonB, prevLatB,
-                    prevCenterLon, prevCenterLat,
-                    prevZoom
-                );
-
-                // Update the map image
+                String mapUrl = mapbox.buildStaticMapUrl(polyline, waypoints, prevCenterLon, prevCenterLat, prevZoom);
                 mapPreview2.setImage(new Image(mapUrl, 600, 400, false, false));
 
-                // Update summary
                 summaryGrid2.getChildren().clear();
                 summaryGrid2.add(new Label("Distance (km):"), 0, 0);
                 summaryGrid2.add(new Label(String.format("%.2f", selected.getDistanceKm())), 1, 0);
@@ -407,6 +397,14 @@ public class GpsAppGui extends Application {
                 summaryGrid2.add(new Label(String.format("%.2f", selected.getDistanceMiles())), 1, 1);
                 summaryGrid2.add(new Label("Travel Time (hrs):"), 0, 2);
                 summaryGrid2.add(new Label(String.format("%.2f", selected.getTimeHrs())), 1, 2);
+
+                waypointsGrid2.getChildren().clear();
+                for (int i = 0; i < waypoints.size(); i++) {
+                    waypointsGrid2.add(new Label("Location " + (i + 1) + ":"), 0, i);
+                    Label wLabel = new Label(waypoints.get(i).getName());
+                    wLabel.setWrapText(true);
+                    waypointsGrid2.add(wLabel, 1, i);
+                }
 
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -430,7 +428,9 @@ public class GpsAppGui extends Application {
         mapCard2.setPadding(new Insets(12));
         mapCard2.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
 
-        VBox outputCard2 = new VBox(12, summaryTitleBox2, summaryGrid2);
+        Label waypointsHdr2 = new Label("Waypoints:");
+        waypointsHdr2.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
+        VBox outputCard2 = new VBox(12, summaryTitleBox2, summaryGrid2, waypointsHdr2, waypointsGrid2);
         outputCard2.setPadding(new Insets(12));
         outputCard2.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
 
