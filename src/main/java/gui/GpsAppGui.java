@@ -1,6 +1,7 @@
 package gui;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
@@ -15,14 +16,16 @@ import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 
+import core.AppPaths;
 import core.Location;
-import core.Route;
-import core.RouteLoader;
 import core.MapboxService;
+import core.Route;
+import core.SQLiteRouteRepository;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.concurrent.Task;
@@ -38,8 +41,8 @@ import javax.imageio.ImageIO;
 
 public class GpsAppGui extends Application {
 
-    private static final String SAVE_FILE_PATH = "saved_routes.json";
     private static final double EPS = 1e-6;
+    private SQLiteRouteRepository repo;
     // -- Map state (must be fields for lambda updates) --
     private double lonA;
     private double latA;
@@ -57,6 +60,18 @@ public class GpsAppGui extends Application {
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("GPS App");
+
+        try {
+            repo = new SQLiteRouteRepository(AppPaths.resolveDbPath());
+        } catch (SQLException e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Database Error");
+            alert.setHeaderText("Could not open route database");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+            Platform.exit();
+            return;
+        }
 
         // TabPane
         TabPane tabPane = new TabPane();
@@ -467,6 +482,14 @@ public class GpsAppGui extends Application {
         launch(args);
     }
 
+    @Override
+    public void stop() {
+        if (repo != null) {
+            try { repo.close(); }
+            catch (SQLException e) { System.err.println("Error closing database: " + e.getMessage()); }
+        }
+    }
+
     // ----- HELPER METHODS -----
     private void exportMapAsPng(Image image, Window owner) {
         if (image == null || image.isError()) {
@@ -520,9 +543,12 @@ public class GpsAppGui extends Application {
     }
 
     private void refreshRouteDropdown(ComboBox<Route> routeComboBox) {
-        routeComboBox.getItems().clear();
-        ArrayList<Route> updatedRoutes = RouteLoader.loadRoutes(SAVE_FILE_PATH);
-        routeComboBox.getItems().addAll(updatedRoutes);
+        try {
+            List<Route> routes = repo.loadRoutes();
+            routeComboBox.getItems().setAll(routes);
+        } catch (SQLException e) {
+            showDbError(null, "Could not load saved routes", e);
+        }
     }
 
     private boolean nameTaken(String candidate, java.util.List<Route> routes) {
@@ -560,7 +586,13 @@ public class GpsAppGui extends Application {
      * @return boolean, whether save was blocked or not
      */
     private boolean addRouteWithDuplicateChecks(Route newRoute, Window owner) {
-        ArrayList<Route> currentRoutes = RouteLoader.loadRoutes(SAVE_FILE_PATH);
+        List<Route> currentRoutes;
+        try {
+            currentRoutes = repo.loadRoutes();
+        } catch (SQLException e) {
+            showDbError(owner, "Could not load routes", e);
+            return false;
+        }
 
         String routeName = newRoute.getName();
         List<Location> newWaypoints = newRoute.getWaypoints();
@@ -592,17 +624,23 @@ public class GpsAppGui extends Application {
 
             ButtonType result = confirm.showAndWait().orElse(cancel);
             if (result == overwrite) {
-                currentRoutes.removeIf(r -> r.getName().equalsIgnoreCase(routeName));
-                currentRoutes.add(newRoute);
-                RouteLoader.saveRoutes(currentRoutes, SAVE_FILE_PATH);
+                try {
+                    repo.replaceRoute(routeName, newRoute);
+                } catch (SQLException e) {
+                    showDbError(owner, "Could not overwrite route", e);
+                    return false;
+                }
                 return true;
             } else if (result == rename) {
                 String newName = promptForNewRouteName(owner, routeName, currentRoutes);
                 if (newName != null) {
-                    // If Route is immutable, construct a new one here
                     newRoute.setName(newName);
-                    currentRoutes.add(newRoute);
-                    RouteLoader.saveRoutes(currentRoutes, SAVE_FILE_PATH);
+                    try {
+                        repo.saveRoute(newRoute);
+                    } catch (SQLException e) {
+                        showDbError(owner, "Could not save route", e);
+                        return false;
+                    }
                     return true;
                 }
                 return false;
@@ -611,8 +649,12 @@ public class GpsAppGui extends Application {
         }
 
         // No conflicts
-        currentRoutes.add(newRoute);
-        RouteLoader.saveRoutes(currentRoutes, SAVE_FILE_PATH);
+        try {
+            repo.saveRoute(newRoute);
+        } catch (SQLException e) {
+            showDbError(owner, "Could not save route", e);
+            return false;
+        }
         return true;
     }
 
@@ -673,6 +715,15 @@ public class GpsAppGui extends Application {
         if (distanceMiles < 50) return 6;
         if (distanceMiles < 1000) return 4;
         return 3;
+    }
+
+    private void showDbError(Window owner, String header, SQLException e) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        if (owner != null) alert.initOwner(owner);
+        alert.setTitle("Database Error");
+        alert.setHeaderText(header);
+        alert.setContentText(e.getMessage());
+        alert.showAndWait();
     }
 
     private record RouteCalcResult(List<Location> locations, String polyline) {}

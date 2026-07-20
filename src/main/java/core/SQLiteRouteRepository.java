@@ -152,8 +152,64 @@ public class SQLiteRouteRepository implements AutoCloseable {
         }
     }
 
+    public void replaceRoute(String existingName, Route replacement) throws SQLException {
+        List<Location> waypoints = replacement.getWaypoints();
+        if (waypoints.size() < 2) {
+            throw new IllegalArgumentException("Route must have at least 2 waypoints");
+        }
+        double speedMph = replacement.getTimeHrs() > 0
+                ? replacement.getDistanceMiles() / replacement.getTimeHrs()
+                : 0.0;
+
+        conn.setAutoCommit(false);
+        try (PreparedStatement del = conn.prepareStatement(
+                     "DELETE FROM routes WHERE name = ? COLLATE NOCASE");
+             PreparedStatement insRoute = conn.prepareStatement(
+                     "INSERT INTO routes (name, distance_km, distance_mi, time_hrs, speed_mph) VALUES (?, ?, ?, ?, ?)",
+                     Statement.RETURN_GENERATED_KEYS);
+             PreparedStatement insWp = conn.prepareStatement(
+                     "INSERT INTO waypoints (route_id, seq, name, latitude, longitude) VALUES (?, ?, ?, ?, ?)")) {
+
+            del.setString(1, existingName);
+            int deleted = del.executeUpdate();
+            if (deleted == 0) {
+                throw new SQLException("Route not found for overwrite: " + existingName);
+            }
+
+            insRoute.setString(1, replacement.getName());
+            insRoute.setDouble(2, replacement.getDistanceKm());
+            insRoute.setDouble(3, replacement.getDistanceMiles());
+            insRoute.setDouble(4, replacement.getTimeHrs());
+            insRoute.setDouble(5, speedMph);
+            insRoute.executeUpdate();
+
+            long routeId;
+            try (ResultSet keys = insRoute.getGeneratedKeys()) {
+                if (!keys.next()) throw new SQLException("Failed to retrieve generated route ID");
+                routeId = keys.getLong(1);
+            }
+
+            for (int i = 0; i < waypoints.size(); i++) {
+                Location loc = waypoints.get(i);
+                insWp.setLong(1, routeId);
+                insWp.setInt(2, i);
+                insWp.setString(3, loc.getName());
+                insWp.setDouble(4, loc.getLatitude());
+                insWp.setDouble(5, loc.getLongitude());
+                insWp.addBatch();
+            }
+            insWp.executeBatch();
+            conn.commit();
+        } catch (SQLException e) {
+            conn.rollback();
+            throw e;
+        } finally {
+            conn.setAutoCommit(true);
+        }
+    }
+
     public boolean deleteRoute(String routeName) throws SQLException {
-        try (PreparedStatement st = conn.prepareStatement("DELETE FROM routes WHERE name = ?")) {
+        try (PreparedStatement st = conn.prepareStatement("DELETE FROM routes WHERE name = ? COLLATE NOCASE")) {
             st.setString(1, routeName);
             return st.executeUpdate() > 0;
         }
