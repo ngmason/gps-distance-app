@@ -28,7 +28,8 @@ A Java/JavaFX application that calculates distances along multi-waypoint routes,
    - After Calculate, reverse geocoding identifies canonical place names for all waypoints; results appear in a "Resolved Places" section
 
 - Route Persistence
-   - Saved to saved_routes.json
+   - Saved to a SQLite database at `%LOCALAPPDATA%\GpsApp\routes.db` (created automatically on first run)
+   - GUI and CLI share the same database
    - All waypoints (not just start and end) stored with reverse-geocoded place names
    - Overwrite/rename/duplicate detection (compares all waypoints)
    - Loads instantly into the GUI on startup; multi-waypoint routes display correctly in the Previous Route tab
@@ -40,7 +41,8 @@ A Java/JavaFX application that calculates distances along multi-waypoint routes,
 - Clean OOP Architecture
    - Location
    - Route
-   - RouteLoader
+   - AppPaths (resolves the SQLite database path)
+   - SQLiteRouteRepository (SQLite persistence: save, load, replace, delete)
    - MapboxService (handles Directions, Static Maps, and Geocoding API calls)
 
 ---
