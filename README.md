@@ -38,6 +38,16 @@ A Java/JavaFX application that calculates distances along multi-waypoint routes,
    - Fast terminal-based route calculation
    - Same distance + travel time logic as GUI
 
+- SQLite Route Persistence
+   - Routes saved to `%LOCALAPPDATA%\GpsApp\routes.db` (created automatically on first run)
+   - GUI and CLI share the same database file
+   - Full CRUD with case-insensitive duplicate detection and transactional overwrite
+
+- Automated Testing
+   - 30 unit and integration tests across four test classes (JUnit 5)
+   - Covers route math, SQLite persistence, path resolution, and Mapbox URL generation
+   - JaCoCo code coverage reporting; 96% line coverage on SQLiteRouteRepository
+
 - Clean OOP Architecture
    - Location
    - Route
@@ -64,8 +74,11 @@ A Java/JavaFX application that calculates distances along multi-waypoint routes,
 - Java 21+
 - JavaFX 21+ (modules: `controls`, `fxml`, `web`, `swing`)
 - [`org.json`](https://github.com/stleary/JSON-java) library (included in `lib/`)
+- `org.xerial:sqlite-jdbc:3.47.1.0` (SQLite JDBC driver, resolved via Maven Central)
 - Gradle 8.14.3
 - Mapbox API Token (required)
+- JUnit Jupiter 5.10.2 (test scope)
+- JaCoCo 0.8.12 (coverage reporting)
 
 ---
 
@@ -111,6 +124,46 @@ src/main/resources/config.properties
    gradle runCli --console=plain
 
 ---
+
+## 🧪 Testing
+
+The project uses **JUnit 5** for automated tests and **JaCoCo** for code coverage reporting. No Mapbox token is required to run the test suite.
+
+### Run the test suite
+
+```bash
+./gradlew clean test
+```
+
+### Generate a coverage report
+
+```bash
+./gradlew test jacocoTestReport
+```
+
+The HTML report is written to:
+
+```
+build/reports/jacoco/test/html/index.html
+```
+
+### What is tested
+
+| Test class | What it covers |
+|---|---|
+| `RouteTest` | Haversine formula accuracy and symmetry, travel-time calculation, N-waypoint distance summing, unmodifiable waypoint list |
+| `SQLiteRouteRepositoryTest` | Full CRUD round-trips, insertion-order loading, case-insensitive delete/replace, transactional rollback when a replace fails mid-operation |
+| `AppPathsTest` | `LOCALAPPDATA` branch, null and blank fallback to `userHome\AppData\Local`, correct application directory and database filename |
+| `MapboxServiceTest` | Static map URL endpoint, access token, polyline overlay, pin color and coordinate placement for 2- and 3-waypoint routes, empty polyline handling |
+
+### What is intentionally not covered
+
+- **JavaFX GUI** — requires a display and a framework such as TestFX; out of scope for this suite
+- **Interactive CLI** — requires stdin simulation; out of scope
+- **Live Mapbox HTTP calls** — `getEncodedPolyline`, `reverseGeocode`, and `forwardGeocode` make real API calls that depend on a live token and network; excluded to keep the suite fast and offline-capable
+
+---
+
 ## 🧩 Coming Soon (Future Enhancements)
 - User-clickable map for coordinate selection
 - Dark-mode map styles

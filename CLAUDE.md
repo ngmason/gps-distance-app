@@ -9,13 +9,15 @@ A Java 21 / JavaFX 21 app that calculates distances between GPS coordinates and 
 ## Build & Run Commands
 
 ```powershell
-gradle build           # compile and assemble
-gradle run             # launch the JavaFX GUI (default main: gui.GpsAppGui)
-gradle runCli --console=plain   # launch the text CLI (core.MainCLI)
-gradle clean           # wipe build artifacts
+gradle build                   # compile and assemble
+gradle run                     # launch the JavaFX GUI (default main: gui.GpsAppGui)
+gradle runCli --console=plain  # launch the text CLI (core.MainCLI)
+gradle clean                   # wipe build artifacts
+gradle test                    # run the automated test suite
+gradle test jacocoTestReport   # run tests and generate HTML + XML coverage report
 ```
 
-There are no tests in this project. `gradle build` is the only build verification step.
+Run `gradle test` before every commit. `gradle build` compiles and assembles but does not run the test suite.
 
 ## Required Setup
 
@@ -63,6 +65,46 @@ User input → Route (Haversine calc) → MapboxService (API calls) → static m
 - `org.json` (json-20231013.jar, bundled in `lib/`) — JSON parsing for Mapbox API responses in `MapboxService`
 - `org.xerial:sqlite-jdbc:3.47.1.0` (resolved via Maven Central) — SQLite JDBC driver; bundles a native binary for Windows x64, no separate DLL required
 - JavaFX 21 via `org.openjfx.javafxplugin` (modules: controls, fxml, web, swing) — `swing` required for `SwingFXUtils` used in PNG export
+- `org.junit.jupiter:junit-jupiter:5.10.2` (test scope) — JUnit 5 test engine; `useJUnitPlatform()` configured in `test` task
+- JaCoCo 0.8.12 via Gradle `jacoco` plugin — `jacocoTestReport` task produces HTML at `build/reports/jacoco/test/html/index.html` and XML alongside it
+
+### Testing
+
+#### Test classes (`src/test/java/core/`)
+
+| Class | What it covers |
+|---|---|
+| `RouteTest` | `haversine()` accuracy and symmetry, `calculateTime()` zero-speed guard, N-waypoint distance summing, `getWaypoints()` unmodifiability, `getStart()`/`getEnd()` delegation |
+| `SQLiteRouteRepositoryTest` | `loadRoutes()` on empty DB, full field round-trip for 2- and 3-waypoint routes, insertion-order loading, duplicate-name constraint, `deleteRoute()` return value and case-insensitivity, `replaceRoute()` case-insensitivity, unknown-name throw, transactional rollback (DELETE succeeds then INSERT fails — verifies both original routes survive) |
+| `AppPathsTest` | Nonblank `LOCALAPPDATA` used as base, `null` fallback to `userHome\AppData\Local`, blank fallback, correct `GpsApp` directory and `routes.db` filename in both branches |
+| `MapboxServiceTest` | Mapbox static-map endpoint, access token, polyline path overlay, `600x400` dimensions, center/zoom, red/blue pins for 2-waypoint route, red/orange/blue pins for 3-waypoint route, empty polyline embedded gracefully |
+
+#### Coverage (as of last run)
+
+| Class | Line coverage |
+|---|---|
+| `SQLiteRouteRepository` | 95.9% |
+| `Location` | 88.9% |
+| `AppPaths` | 80.0% |
+| `Route` | 79.6% |
+| `MapboxService` | 15.9% (only `buildStaticMapUrl` is testable without HTTP) |
+| `GpsAppGui`, `MainCLI` | 0% — intentionally excluded (see below) |
+
+Overall testable-core coverage: ~71% lines. Run `gradle test jacocoTestReport` to regenerate.
+
+#### Intentionally untested
+
+- **`GpsAppGui`** — JavaFX; requires TestFX or a display; out of scope
+- **`MainCLI`** — interactive stdin loop; out of scope
+- **`MapboxService` HTTP methods** (`getEncodedPolyline`, `reverseGeocode`, `forwardGeocode`) — make live API calls; excluded to keep the suite fast and offline-capable
+
+#### Developer guidance
+
+- New features in `core/` must ship with appropriate automated tests.
+- Run `gradle test` before every commit; a failing test suite blocks merges.
+- Run `gradle test jacocoTestReport` before releases to verify coverage has not regressed.
+- Do not write tests solely to raise coverage percentages — only add tests that assert correct behavior or protect against real regression risk.
+- `MapboxService(String token)` and `AppPaths.resolvePath(String, String)` are package-private entry points for tests; do not make them public.
 
 ### Persistent data files
 
