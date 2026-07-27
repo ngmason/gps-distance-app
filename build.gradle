@@ -10,6 +10,11 @@ repositories {
 dependencies {
     implementation files("lib/json-20231013.jar")
     implementation 'org.xerial:sqlite-jdbc:3.47.1.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 application {
