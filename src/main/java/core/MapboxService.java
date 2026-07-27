@@ -26,7 +26,11 @@ public class MapboxService {
     private final String token;
 
     public MapboxService() {
-         this.token = loadToken();
+        this(loadToken());
+    }
+
+    MapboxService(String token) {
+        this.token = token;
     }
 
     /**
