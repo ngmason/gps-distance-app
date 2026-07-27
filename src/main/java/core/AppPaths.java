@@ -10,10 +10,13 @@ public final class AppPaths {
     private AppPaths() {}
 
     public static Path resolveDbPath() {
-        String localAppData = System.getenv("LOCALAPPDATA");
+        return resolvePath(System.getenv("LOCALAPPDATA"), System.getProperty("user.home"));
+    }
+
+    static Path resolvePath(String localAppData, String userHome) {
         Path base = (localAppData != null && !localAppData.isBlank())
                 ? Path.of(localAppData)
-                : Path.of(System.getProperty("user.home"), "AppData", "Local");
+                : Path.of(userHome, "AppData", "Local");
         return base.resolve(APP_DIR).resolve(DB_FILE);
     }
 }
