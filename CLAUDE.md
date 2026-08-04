@@ -46,7 +46,7 @@ A template is at `src/main/resources/config.properties.example`.
 
 Single JavaFX class with two tabs:
 - **"Enter new route"** — card-based layout; location cards live in a `VBox waypointsContainer` backed by `List<LocationCard> locationCards` (initially Location 1 + Location 2); each `LocationCard` (private static inner class) holds address field, Search button, resolved label, lat/lon fields, and a styled `VBox card`; search handlers are wired via `wireSearchHandler(LocationCard, MapboxService)` (one shared method); **"+ Add Stop"** button appends a new `LocationCard("Location N", ...)` with a wired search handler to the list and container; **Route Options** card (name field, speed dropdown, full-width Calculate button); **Map Preview** card (map image + Export as PNG); output card (**Route Summary** + **Resolved Places**); on Calculate, all `locationCards` are iterated to collect coordinates, a `Task<RouteCalcResult>` runs N `reverseGeocode` calls and `getEncodedPolyline(List<Location>)` in the background, `RouteCalcResult(List<Location> locations, String polyline)` is the typed return record; `setOnSucceeded` builds `Route(List<Location>, speed, name)`, calls `buildStaticMapUrl(polyline, List<Location>, ...)`, rebuilds **Resolved Places** grid with N rows; zoom computed via `calculateZoomLevel(List<Location>)` (bounding-box diagonal)
-- **"Select previous route"** — card-based layout with three cards: **Pick a Route** (dropdown populated via `SQLiteRouteRepository.loadRoutes()`); **Map Preview** (map image + Export as PNG); **Route Summary** + **Waypoints** output card (distance, travel time, then a grid of all waypoint names populated when a route is selected); selecting a route calls `selected.getWaypoints()`, `getEncodedPolyline(List<Location>)`, `buildStaticMapUrl(polyline, List<Location>, ...)`, and `calculateZoomLevel(List<Location>)` on the FX thread
+- **"Select previous route"** — card-based layout with three cards: **Pick a Route** (dropdown populated via `SQLiteRouteRepository.loadRoutes()` + **Delete Route** button in the same row, disabled until a route is selected; clicking shows a confirmation dialog naming the selected route, then calls `repo.deleteRoute()`; if it returns `true`, refreshes the dropdown, clears the selection, summary grid, waypoints grid, and map image; if it returns `false`, shows a warning alert and leaves all UI state unchanged; `SQLException` routes to `showDbError()`); **Map Preview** (map image + Export as PNG); **Route Summary** + **Waypoints** output card (distance, travel time, then a grid of all waypoint names populated when a route is selected); selecting a route calls `selected.getWaypoints()`, `getEncodedPolyline(List<Location>)`, `buildStaticMapUrl(polyline, List<Location>, ...)`, and `calculateZoomLevel(List<Location>)` on the FX thread
 
 Both tabs have an **Export as PNG** button (`exportMapAsPng(Image, Window)` in `GpsAppGui`): opens a `FileChooser`, appends `.png` if the user omits it, shows a success dialog with the saved path, or an error dialog on failure.
 
@@ -94,15 +94,18 @@ Overall testable-core coverage: ~71% lines. Run `gradle test jacocoTestReport` t
 
 #### Intentionally untested
 
-- **`GpsAppGui`** — JavaFX; requires TestFX or a display; out of scope
+- **`GpsAppGui`** — JavaFX; requires TestFX or a display; out of scope. GUI behavior (including the Delete Route flow: button enable/disable, confirmation dialog, state clearing) is verified through manual smoke testing. Repository behavior underlying all GUI operations is covered by `SQLiteRouteRepositoryTest`.
 - **`MainCLI`** — interactive stdin loop; out of scope
 - **`MapboxService` HTTP methods** (`getEncodedPolyline`, `reverseGeocode`, `forwardGeocode`) — make live API calls; excluded to keep the suite fast and offline-capable
 
 #### Developer guidance
 
 - New features in `core/` must ship with appropriate automated tests.
+- GUI-only changes are verified through manual smoke testing rather than automated UI tests.
 - Run `gradle test` before every commit; a failing test suite blocks merges.
+- Perform a quick manual smoke test for any GUI changes before merging.
 - Run `gradle test jacocoTestReport` before releases to verify coverage has not regressed.
+- Update README.md and CLAUDE.md whenever new user-facing features are added.
 - Do not write tests solely to raise coverage percentages — only add tests that assert correct behavior or protect against real regression risk.
 - `MapboxService(String token)` and `AppPaths.resolvePath(String, String)` are package-private entry points for tests; do not make them public.
 

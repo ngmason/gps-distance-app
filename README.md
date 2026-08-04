@@ -20,6 +20,7 @@ A Java/JavaFX application that calculates distances along multi-waypoint routes,
    - Calculate uses all location cards in order; total distance is the sum across all legs
    - Live-updating map preview
    - Saved routes dropdown regenerates the map dynamically; waypoint names are listed in the output card
+   - Delete a saved route directly from the Previous Route tab; a confirmation dialog names the route before deletion
    - Route summary includes:
       - Distance (km & miles)
       - Travel time
@@ -28,20 +29,16 @@ A Java/JavaFX application that calculates distances along multi-waypoint routes,
    - After Calculate, reverse geocoding identifies canonical place names for all waypoints; results appear in a "Resolved Places" section
 
 - Route Persistence
-   - Saved to a SQLite database at `%LOCALAPPDATA%\GpsApp\routes.db` (created automatically on first run)
-   - GUI and CLI share the same database
+   - Saved to a local SQLite database at `%LOCALAPPDATA%\GpsApp\routes.db` (created automatically on first run)
+   - GUI and CLI share the same database file
    - All waypoints (not just start and end) stored with reverse-geocoded place names
-   - Overwrite/rename/duplicate detection (compares all waypoints)
-   - Loads instantly into the GUI on startup; multi-waypoint routes display correctly in the Previous Route tab
+   - Full CRUD: save, load, transactional overwrite, and delete
+   - Case-insensitive duplicate detection; prompts to overwrite or rename on name conflict
+   - Routes load instantly into the Previous Route tab on startup
 
 - CLI Mode
    - Fast terminal-based route calculation
    - Same distance + travel time logic as GUI
-
-- SQLite Route Persistence
-   - Routes saved to `%LOCALAPPDATA%\GpsApp\routes.db` (created automatically on first run)
-   - GUI and CLI share the same database file
-   - Full CRUD with case-insensitive duplicate detection and transactional overwrite
 
 - Automated Testing
    - 30 unit and integration tests across four test classes (JUnit 5)
@@ -158,7 +155,7 @@ build/reports/jacoco/test/html/index.html
 
 ### What is intentionally not covered
 
-- **JavaFX GUI** — requires a display and a framework such as TestFX; out of scope for this suite
+- **JavaFX GUI** — requires a display and a framework such as TestFX; out of scope for this suite. GUI-only changes (such as the Delete Route button) are verified through manual smoke testing. Repository behavior underlying all GUI operations is covered by `SQLiteRouteRepositoryTest`.
 - **Interactive CLI** — requires stdin simulation; out of scope
 - **Live Mapbox HTTP calls** — `getEncodedPolyline`, `reverseGeocode`, and `forwardGeocode` make real API calls that depend on a live token and network; excluded to keep the suite fast and offline-capable
 
