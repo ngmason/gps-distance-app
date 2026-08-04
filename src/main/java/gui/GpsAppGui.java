@@ -387,6 +387,13 @@ public class GpsAppGui extends Application {
             }
         });
 
+        Button deleteBtn = new Button("Delete Route");
+        deleteBtn.setStyle("-fx-background-color: #FF4444; -fx-text-fill: white; -fx-font-weight: bold;");
+        deleteBtn.setDisable(true);
+
+        routeComboBox.valueProperty().addListener((obs, oldVal, newVal) ->
+                deleteBtn.setDisable(newVal == null));
+
         routeComboBox.setOnAction(e -> {
             Route selected = routeComboBox.getValue();
             if (selected == null) return;
@@ -425,6 +432,44 @@ public class GpsAppGui extends Application {
                 ex.printStackTrace();
             }
         });
+
+        deleteBtn.setOnAction(e -> {
+            Route selected = routeComboBox.getValue();
+            if (selected == null) return;
+
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.initOwner(deleteBtn.getScene().getWindow());
+            confirm.setTitle("Delete Route");
+            confirm.setHeaderText("Delete \"" + selected.getName() + "\"?");
+            confirm.setContentText("This action cannot be undone.");
+            ButtonType deleteButton = new ButtonType("Delete");
+            confirm.getButtonTypes().setAll(deleteButton, ButtonType.CANCEL);
+
+            confirm.showAndWait().ifPresent(response -> {
+                if (response != deleteButton) return;
+                try {
+                    boolean deleted = repo.deleteRoute(selected.getName());
+                    if (deleted) {
+                        refreshRouteDropdown(routeComboBox);
+                        routeComboBox.setValue(null);
+                        summaryGrid2.getChildren().clear();
+                        waypointsGrid2.getChildren().clear();
+                        mapPreview2.setImage(null);
+                    } else {
+                        Alert notFound = new Alert(Alert.AlertType.WARNING);
+                        notFound.initOwner(deleteBtn.getScene().getWindow());
+                        notFound.setTitle("Route Not Found");
+                        notFound.setHeaderText("Could not delete route");
+                        notFound.setContentText("\"" + selected.getName() + "\" was not found in the database. "
+                                + "It may have already been removed.");
+                        notFound.showAndWait();
+                    }
+                } catch (SQLException ex) {
+                    showDbError(deleteBtn.getScene().getWindow(), "Could not delete route", ex);
+                }
+            });
+        });
+
         Button exportBtn2 = new Button("Export as PNG");
         exportBtn2.setOnAction(e ->
             exportMapAsPng(mapPreview2.getImage(), exportBtn2.getScene().getWindow())
@@ -432,7 +477,10 @@ public class GpsAppGui extends Application {
 
         Label pickRouteHdr = new Label("Pick a Route");
         pickRouteHdr.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
-        VBox pickCard = new VBox(8, pickRouteHdr, routeComboBox);
+        HBox pickRow = new HBox(8, routeComboBox, deleteBtn);
+        HBox.setHgrow(routeComboBox, Priority.ALWAYS);
+        pickRow.setAlignment(Pos.CENTER_LEFT);
+        VBox pickCard = new VBox(8, pickRouteHdr, pickRow);
         pickCard.setPadding(new Insets(12));
         pickCard.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
 
