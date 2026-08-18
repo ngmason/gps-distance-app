@@ -53,14 +53,35 @@ task runCli(type: JavaExec) {
     standardInput = System.in
 }
 
+tasks.register('generatePackagingConfig', WriteProperties) {
+    group = 'distribution'
+    description = 'Writes a config.properties containing the deployment Mapbox token, for jpackage staging only.'
+    destinationFile = layout.buildDirectory.file('jpackage/config/config.properties')
+    outputs.upToDateWhen { false }
+    doFirst {
+        def token = System.getenv('GPS_APP_MAPBOX_DEPLOY_TOKEN')
+        if (token == null || token.trim().isEmpty()) {
+            throw new GradleException(
+                "GPS_APP_MAPBOX_DEPLOY_TOKEN is missing or blank. " +
+                "Set it to a valid public Mapbox deployment token before running jpackageJar/jpackageInput."
+            )
+        }
+        property('mapbox.token', token)
+    }
+}
+
 tasks.register('jpackageJar', Jar) {
     group = 'distribution'
-    description = 'Builds the application jar for jpackage staging, excluding local dev config.properties.'
+    description = 'Builds the application jar for jpackage staging, using the generated deployment config.properties.'
     archiveBaseName = 'gps-distance-app'
     archiveVersion = ''
     archiveClassifier = ''
-    from sourceSets.main.output
-    exclude 'config.properties'
+    destinationDirectory = layout.buildDirectory.dir('jpackage/libs')
+    dependsOn generatePackagingConfig
+    from(sourceSets.main.output) {
+        exclude 'config.properties'
+    }
+    from(generatePackagingConfig.destinationFile)
     manifest {
         attributes 'Main-Class': 'gui.GpsAppGui'
     }
