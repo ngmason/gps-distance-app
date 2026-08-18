@@ -8,16 +8,18 @@ A Java 21 / JavaFX 21 app that calculates distances between GPS coordinates and 
 
 ## Build & Run Commands
 
+The Gradle Wrapper is the preferred build interface: `gradlew.bat`, pinned to Gradle 8.10.2 (bin distribution, SHA-256-verified in `gradle/wrapper/gradle-wrapper.properties`). It removes the dependency on a system-wide Gradle install and guarantees every contributor and CI run uses the same Gradle version. A system `gradle` install still works if present, but `gradlew.bat` is the source of truth going forward.
+
 ```powershell
-gradle build                   # compile and assemble
-gradle run                     # launch the JavaFX GUI (default main: gui.GpsAppGui)
-gradle runCli --console=plain  # launch the text CLI (core.MainCLI)
-gradle clean                   # wipe build artifacts
-gradle test                    # run the automated test suite
-gradle test jacocoTestReport   # run tests and generate HTML + XML coverage report
+gradlew.bat build                   # compile and assemble
+gradlew.bat run                     # launch the JavaFX GUI (default main: gui.GpsAppGui)
+gradlew.bat runCli --console=plain  # launch the text CLI (core.MainCLI)
+gradlew.bat clean                   # wipe build artifacts (including build/jpackage/, see Packaging below)
+gradlew.bat test                    # run the automated test suite
+gradlew.bat test jacocoTestReport   # run tests and generate HTML + XML coverage report
 ```
 
-Run `gradle test` before every commit. `gradle build` compiles and assembles but does not run the test suite.
+Run `gradlew.bat test` before every commit. `gradlew.bat build` compiles and assembles but does not run the test suite.
 
 ## Required Setup
 
@@ -90,7 +92,7 @@ User input → Route (Haversine calc) → MapboxService (API calls) → static m
 | `MapboxService` | 15.9% (only `buildStaticMapUrl` is testable without HTTP) |
 | `GpsAppGui`, `MainCLI` | 0% — intentionally excluded (see below) |
 
-Overall testable-core coverage: ~71% lines. Run `gradle test jacocoTestReport` to regenerate.
+Overall testable-core coverage: ~71% lines. Run `gradlew.bat test jacocoTestReport` to regenerate.
 
 #### Intentionally untested
 
@@ -102,9 +104,9 @@ Overall testable-core coverage: ~71% lines. Run `gradle test jacocoTestReport` t
 
 - New features in `core/` must ship with appropriate automated tests.
 - GUI-only changes are verified through manual smoke testing rather than automated UI tests.
-- Run `gradle test` before every commit; a failing test suite blocks merges.
+- Run `gradlew.bat test` before every commit; a failing test suite blocks merges.
 - Perform a quick manual smoke test for any GUI changes before merging.
-- Run `gradle test jacocoTestReport` before releases to verify coverage has not regressed.
+- Run `gradlew.bat test jacocoTestReport` before releases to verify coverage has not regressed.
 - Update README.md and CLAUDE.md whenever new user-facing features are added.
 - Do not write tests solely to raise coverage percentages — only add tests that assert correct behavior or protect against real regression risk.
 - `MapboxService(String token)` and `AppPaths.resolvePath(String, String)` are package-private entry points for tests; do not make them public.
@@ -112,3 +114,62 @@ Overall testable-core coverage: ~71% lines. Run `gradle test jacocoTestReport` t
 ### Persistent data files
 
 - `%LOCALAPPDATA%\GpsApp\routes.db` (outside the project, never committed) — SQLite database; created automatically on first run by `SQLiteRouteRepository`; shared by both the GUI and the CLI
+
+### Packaging (jpackage staging)
+
+Long-term goal: package the app as a self-contained Windows desktop application via `jpackage`. Work completed so far covers only reproducible jar staging — **no app-image or installer yet**.
+
+#### Task dependency flow
+
+```
+jpackageInput (Sync)                                    → build/jpackage/input/
+  └─ depends on jpackageJar (Jar)                        → build/jpackage/libs/gps-distance-app.jar
+        ├─ depends on generatePackagingConfig (WriteProperties) → build/jpackage/config/config.properties
+        │     └─ fails fast (GradleException) if GPS_APP_MAPBOX_DEPLOY_TOKEN is unset/blank
+        │     └─ outputs.upToDateWhen { false } — always reruns, so a changed token can never be
+        │        skipped because Gradle thinks the previously generated file is up to date
+        ├─ from(sourceSets.main.output) { exclude 'config.properties' }  — dev token never enters this jar
+        └─ from(generatePackagingConfig.destinationFile)                 — deployment token only
+```
+
+`jpackageInput` also copies every file in `configurations.runtimeClasspath` flat into `build/jpackage/input/` alongside the jar — JavaFX 21's controls/fxml/media/swing/web/graphics/base modules (both the classifier-less and `-win` native jars), plus `sqlite-jdbc-3.47.1.0.jar` and `json-20231013.jar`. This is exactly the same resolved set `gradlew.bat run` already uses, just staged as flat files for a future `jpackage --input` invocation.
+
+#### Two separate jar artifacts — do not conflate
+
+| | Task | Output path | Contains |
+|---|---|---|---|
+| Development | `jar` (standard) | `build/libs/gps-distance-app.jar` | local dev `src/main/resources/config.properties`, if present |
+| Packaging | `jpackageJar` | `build/jpackage/libs/gps-distance-app.jar` | generated deployment `config.properties` only |
+
+Both produce a file named `gps-distance-app.jar`, but in different directories — `jpackageJar` sets an explicit `destinationDirectory` for exactly this reason. Earlier in development, `jpackageJar` defaulted to Gradle's standard `build/libs/` output directory, and running `jpackageInput` silently overwrote the development jar with the deployment-token jar. **Do not remove that `destinationDirectory` override** or the collision returns.
+
+#### Credential handling rules
+
+- Development: `MapboxService.loadToken()` (unmodified) reads `/config.properties` off the classpath at runtime. Locally that's the gitignored `src/main/resources/config.properties` with your personal token, used by `gradlew.bat run`/`test`/`build`.
+- Packaging: `generatePackagingConfig` reads a **dedicated public Mapbox deployment token** from the `GPS_APP_MAPBOX_DEPLOY_TOKEN` environment variable and writes it to `build/jpackage/config/config.properties`. This file exists only under `build/` and is deleted by `gradlew.bat clean` (no special-casing needed — it's covered by the default `clean` task deleting the whole build directory).
+- The deployment token must never be committed to Git, and should be a distinct token from any local dev token (keep them separately revocable on the Mapbox account).
+- `jpackageJar` explicitly excludes `config.properties` from `sourceSets.main.output` before layering in the generated packaging config, so a local dev token can never leak into a packaged jar even if `src/main/resources/config.properties` exists at packaging time.
+- Packaging fails immediately (`GradleException`, non-zero exit) if `GPS_APP_MAPBOX_DEPLOY_TOKEN` is missing or blank. That check runs inside `generatePackagingConfig`'s `doFirst` — at execution time, not configuration time — so `run`/`test`/`build` never evaluate it and never require the variable to be set.
+
+#### Commands
+
+```powershell
+gradlew.bat clean                                        # also wipes build/jpackage/ entirely
+gradlew.bat test                                          # unaffected by packaging infra; no deploy token needed
+gradlew.bat build                                         # unaffected by packaging infra; no deploy token needed
+set GPS_APP_MAPBOX_DEPLOY_TOKEN=pk.your_deploy_token_here
+gradlew.bat jpackageInput                                 # stages build/jpackage/input/; fails clearly if the token is unset/blank
+```
+
+#### Not yet implemented
+
+- `jpackage --type app-image` invocation (turning `build/jpackage/input/` into a runnable app image)
+- Windows application icon
+- WiX/installer generation (`.msi` / `.exe`)
+- Smoke testing of the packaged app
+
+#### Guidance for future contributors
+
+- Do not point `jpackageJar`'s `destinationDirectory` back at `build/libs/` — see the collision note above.
+- Do not remove `outputs.upToDateWhen { false }` from `generatePackagingConfig` — without it, Gradle's up-to-date check snapshots task inputs before `doFirst` runs, so a changed `GPS_APP_MAPBOX_DEPLOY_TOKEN` could be silently ignored and a stale token reused.
+- When adding the `jpackage --type app-image` task, wire it to depend on `jpackageInput` rather than duplicating its file-staging logic.

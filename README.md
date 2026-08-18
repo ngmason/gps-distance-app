@@ -72,7 +72,7 @@ A Java/JavaFX application that calculates distances along multi-waypoint routes,
 - JavaFX 21+ (modules: `controls`, `fxml`, `web`, `swing`)
 - [`org.json`](https://github.com/stleary/JSON-java) library (included in `lib/`)
 - `org.xerial:sqlite-jdbc:3.47.1.0` (SQLite JDBC driver, resolved via Maven Central)
-- Gradle 8.10.2
+- Gradle 8.10.2 (via the included Gradle Wrapper — no separate Gradle install required)
 - Mapbox API Token (required)
 - JUnit Jupiter 5.10.2 (test scope)
 - JaCoCo 0.8.12 (coverage reporting)
@@ -95,30 +95,30 @@ src/main/resources/config.properties
 
 ## 🔧 How to Run GUI
 
-1. Make sure Java and Gradle are installed:
+The included Gradle Wrapper (`gradlew.bat`, pinned to Gradle 8.10.2) is the preferred way to build and run — no separate Gradle install needed.
+
+1. Make sure Java 21+ is installed:
    ```bash
    java -version
-   gradle -version
-2. Next run gradle build:
+2. Build:
    ```bash
-   gradle build
-3. Then run:
+   gradlew.bat build
+3. Run:
    ```bash
-   gradle run
+   gradlew.bat run
 ---
 
 ## 🔧 How to Run CLI
 
-1. Make sure Java and Gradle are installed:
+1. Make sure Java 21+ is installed:
    ```bash
    java -version
-   gradle -version
-2. Next run gradle build:
+2. Build:
    ```bash
-   gradle build
-3. Then run:
+   gradlew.bat build
+3. Run:
    ```bash
-   gradle runCli --console=plain
+   gradlew.bat runCli --console=plain
 
 ---
 
@@ -129,13 +129,13 @@ The project uses **JUnit 5** for automated tests and **JaCoCo** for code coverag
 ### Run the test suite
 
 ```bash
-./gradlew clean test
+gradlew.bat clean test
 ```
 
 ### Generate a coverage report
 
 ```bash
-./gradlew test jacocoTestReport
+gradlew.bat test jacocoTestReport
 ```
 
 The HTML report is written to:
@@ -158,6 +158,25 @@ build/reports/jacoco/test/html/index.html
 - **JavaFX GUI** — requires a display and a framework such as TestFX; out of scope for this suite. GUI-only changes (such as the Delete Route button) are verified through manual smoke testing. Repository behavior underlying all GUI operations is covered by `SQLiteRouteRepositoryTest`.
 - **Interactive CLI** — requires stdin simulation; out of scope
 - **Live Mapbox HTTP calls** — `getEncodedPolyline`, `reverseGeocode`, and `forwardGeocode` make real API calls that depend on a live token and network; excluded to keep the suite fast and offline-capable
+
+---
+
+## 🖥️ Packaging (Windows Desktop App)
+
+Work is underway to package the app as a self-contained Windows desktop application using `jpackage`. Implemented so far:
+
+- A pinned Gradle Wrapper (`gradlew.bat`, Gradle 8.10.2) so packaging builds are reproducible on any machine, with no local Gradle install required.
+- `gradlew.bat jpackageInput` stages a packaging-only application jar plus every runtime dependency (JavaFX, SQLite JDBC, `org.json`) into `build/jpackage/input/`, ready for a future `jpackage` invocation. This is a completely separate jar from the one `gradlew.bat run`/`build` use for local development.
+- Packaging uses a dedicated **public Mapbox deployment token**, supplied via the `GPS_APP_MAPBOX_DEPLOY_TOKEN` environment variable — never your local `config.properties`, and never committed to Git. The command fails immediately with a clear error if the variable is missing or blank.
+
+```bash
+set GPS_APP_MAPBOX_DEPLOY_TOKEN=pk.your_deploy_token_here
+gradlew.bat jpackageInput
+```
+
+**Not yet implemented:** `jpackage --type app-image` generation, a Windows application icon, WiX/installer (`.msi`/`.exe`) generation, and smoke testing of the packaged app.
+
+See CLAUDE.md for the full task dependency flow and credential-handling rules.
 
 ---
 
