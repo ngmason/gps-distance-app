@@ -52,3 +52,25 @@ task runCli(type: JavaExec) {
     mainClass.set('core.MainCLI')
     standardInput = System.in
 }
+
+tasks.register('jpackageJar', Jar) {
+    group = 'distribution'
+    description = 'Builds the application jar for jpackage staging, excluding local dev config.properties.'
+    archiveBaseName = 'gps-distance-app'
+    archiveVersion = ''
+    archiveClassifier = ''
+    from sourceSets.main.output
+    exclude 'config.properties'
+    manifest {
+        attributes 'Main-Class': 'gui.GpsAppGui'
+    }
+}
+
+tasks.register('jpackageInput', Sync) {
+    group = 'distribution'
+    description = 'Stages the application jar and all runtime dependencies into build/jpackage/input for jpackage.'
+    dependsOn jpackageJar
+    from(jpackageJar.archiveFile)
+    from(configurations.runtimeClasspath)
+    into layout.buildDirectory.dir('jpackage/input')
+}
