@@ -72,7 +72,7 @@ A Java/JavaFX application that calculates distances along multi-waypoint routes,
 - JavaFX 21+ (modules: `controls`, `fxml`, `web`, `swing`)
 - [`org.json`](https://github.com/stleary/JSON-java) library (included in `lib/`)
 - `org.xerial:sqlite-jdbc:3.47.1.0` (SQLite JDBC driver, resolved via Maven Central)
-- Gradle 8.14.3
+- Gradle 8.10.2
 - Mapbox API Token (required)
 - JUnit Jupiter 5.10.2 (test scope)
 - JaCoCo 0.8.12 (coverage reporting)
