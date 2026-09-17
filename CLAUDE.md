@@ -159,17 +159,51 @@ gradlew.bat test                                          # unaffected by packag
 gradlew.bat build                                         # unaffected by packaging infra; no deploy token needed
 set GPS_APP_MAPBOX_DEPLOY_TOKEN=pk.your_deploy_token_here
 gradlew.bat jpackageInput                                 # stages build/jpackage/input/; fails clearly if the token is unset/blank
+gradlew.bat jpackageAppImage                              # builds build/jpackage/app-image/GPS Distance Calculator/ (runnable .exe)
+gradlew.bat jpackageInstaller                             # builds build/jpackage/installer/*.exe; requires WiX Toolset on PATH
 ```
+
+#### App-image and installer tasks
+
+Two further tasks build on `jpackageInput`:
+
+```
+jpackageAppImage (Exec)                                  → build/jpackage/app-image/GPS Distance Calculator/
+  └─ depends on jpackageInput
+  └─ deletes any previous output dir first (jpackage refuses to write into an existing app-image dir)
+  └─ jpackage --type app-image --input build/jpackage/input --icon packaging/compass.ico ...
+
+jpackageInstaller (Exec)                                 → build/jpackage/installer/
+  └─ depends on jpackageAppImage
+  └─ deletes any previous output dir first
+  └─ jpackage --type exe --app-image build/jpackage/app-image/GPS Distance Calculator ...
+  └─ requires the WiX Toolset (candle.exe/light.exe) on PATH — jpackage itself fails with a
+     clear, actionable error ("Can not find WiX tools... download from https://wixtoolset.org")
+     if it's missing, so no custom preflight check was added
+```
+
+App metadata (name `GPS Distance Calculator`, version `1.0.0`, vendor `Nina Mason`) is defined once via `ext { jpackageAppName / jpackageAppVersion / jpackageVendor }` in `build.gradle` and reused by both tasks.
+
+**Icon**: `packaging/compass.ico` — a multi-resolution (16–256px) Windows icon generated from `src/main/resources/compass_icon.png`. Deliberately placed outside `src/main/resources/` since it's a packaging-time input, not a runtime resource, and must not be bundled into the application jar.
+
+**Critical JavaFX gotcha found during smoke testing**: a bare `jpackage --type app-image` invocation (classpath-only launch, no `--java-options`) produces an app that fails immediately with `Error: JavaFX runtime components are missing, and are required to run this application`. JavaFX classes are only visible to the JVM's module system when loaded via an explicit module-path, even though `gradlew.bat run` masks this because the `org.openjfx.javafxplugin` Gradle plugin adds the equivalent flags automatically for that task. `jpackageAppImage` must pass:
+
+```
+--java-options '--module-path=$APPDIR'
+--java-options '--add-modules=javafx.controls,javafx.fxml,javafx.web,javafx.swing'
+```
+
+`$APPDIR` is a jpackage-recognized placeholder resolved at launch to the app's own install directory, where `jpackageInput` already staged every JavaFX jar. This is safe from module-name collisions: the classifier-less JavaFX jars (e.g. `javafx-controls-21.jar`) declare `Automatic-Module-Name: javafx.controlsEmpty` in their manifest — deliberately distinct from the real `javafx.controls` module in the `-win` jar — specifically so both can coexist on one module-path without conflict. Confirmed by launching the built `.exe` directly: without the fix it exits immediately with the JavaFX error; with the fix the JVM starts, the GUI thread runs, and (with a placeholder token) it gets as far as a live Mapbox HTTP call before failing on a 401 — proving the classpath, native runtime, icon, and app metadata are all wired correctly end-to-end.
 
 #### Not yet implemented
 
-- `jpackage --type app-image` invocation (turning `build/jpackage/input/` into a runnable app image)
-- Windows application icon
-- WiX/installer generation (`.msi` / `.exe`)
-- Smoke testing of the packaged app
+- WiX Toolset is not installed in this dev environment, so `jpackageInstaller` has not been run to a successful `.exe` — only confirmed to fail with jpackage's own clear error message. Installing WiX (https://wixtoolset.org, v3.x, `candle.exe`/`light.exe` on PATH) is an external environment prerequisite, not something a commit can provide.
+- End-to-end smoke testing of the **installer** itself (install → launch → uninstall) — blocked on the WiX gap above. The **app-image** (pre-installer) has been smoke-tested successfully (see above).
+- MSI packaging was considered and intentionally not built — EXE was chosen as the sole installer type for this phase.
 
 #### Guidance for future contributors
 
 - Do not point `jpackageJar`'s `destinationDirectory` back at `build/libs/` — see the collision note above.
 - Do not remove `outputs.upToDateWhen { false }` from `generatePackagingConfig` — without it, Gradle's up-to-date check snapshots task inputs before `doFirst` runs, so a changed `GPS_APP_MAPBOX_DEPLOY_TOKEN` could be silently ignored and a stale token reused.
-- When adding the `jpackage --type app-image` task, wire it to depend on `jpackageInput` rather than duplicating its file-staging logic.
+- Do not drop the `--module-path`/`--add-modules` `--java-options` from `jpackageAppImage` — see the JavaFX gotcha above; removing them silently breaks the packaged app at launch with no compile-time or `jpackageInput`-time warning.
+- If retargeting the icon, regenerate `packaging/compass.ico` as a multi-resolution `.ico` (Windows Explorer and the taskbar pick different embedded sizes); a single-resolution `.ico` looks blurry at some sizes.

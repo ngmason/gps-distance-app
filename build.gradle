@@ -95,3 +95,56 @@ tasks.register('jpackageInput', Sync) {
     from(configurations.runtimeClasspath)
     into layout.buildDirectory.dir('jpackage/input')
 }
+
+ext {
+    jpackageAppName = 'GPS Distance Calculator'
+    jpackageAppVersion = '1.0.0'
+    jpackageVendor = 'Nina Mason'
+}
+
+tasks.register('jpackageAppImage', Exec) {
+    group = 'distribution'
+    description = 'Builds a self-contained Windows app-image via jpackage (no installer yet).'
+    dependsOn jpackageInput
+    inputs.dir(layout.buildDirectory.dir('jpackage/input'))
+    inputs.file('packaging/compass.ico')
+    def outputDir = layout.buildDirectory.dir('jpackage/app-image')
+    outputs.dir(outputDir)
+    doFirst {
+        delete outputDir
+    }
+    commandLine 'jpackage',
+        '--type', 'app-image',
+        '--input', layout.buildDirectory.dir('jpackage/input').get().asFile,
+        '--dest', outputDir.get().asFile,
+        '--name', jpackageAppName,
+        '--main-jar', 'gps-distance-app.jar',
+        '--main-class', 'gui.GpsAppGui',
+        '--icon', file('packaging/compass.ico'),
+        '--app-version', jpackageAppVersion,
+        '--vendor', jpackageVendor,
+        '--java-options', '--module-path=$APPDIR',
+        '--java-options', '--add-modules=javafx.controls,javafx.fxml,javafx.web,javafx.swing'
+}
+
+tasks.register('jpackageInstaller', Exec) {
+    group = 'distribution'
+    description = 'Builds a Windows EXE installer via jpackage. Requires the WiX Toolset (candle.exe/light.exe) on PATH.'
+    dependsOn jpackageAppImage
+    def appImageDir = layout.buildDirectory.dir("jpackage/app-image/${jpackageAppName}")
+    inputs.dir(appImageDir)
+    def outputDir = layout.buildDirectory.dir('jpackage/installer')
+    outputs.dir(outputDir)
+    doFirst {
+        delete outputDir
+    }
+    commandLine 'jpackage',
+        '--type', 'exe',
+        '--app-image', appImageDir.get().asFile,
+        '--dest', outputDir.get().asFile,
+        '--name', jpackageAppName,
+        '--app-version', jpackageAppVersion,
+        '--vendor', jpackageVendor,
+        '--win-menu',
+        '--win-shortcut'
+}

@@ -163,20 +163,24 @@ build/reports/jacoco/test/html/index.html
 
 ## 🖥️ Packaging (Windows Desktop App)
 
-Work is underway to package the app as a self-contained Windows desktop application using `jpackage`. Implemented so far:
+The app can be packaged as a self-contained Windows desktop application using `jpackage` — no separate Java install required for end users.
 
 - A pinned Gradle Wrapper (`gradlew.bat`, Gradle 8.10.2) so packaging builds are reproducible on any machine, with no local Gradle install required.
-- `gradlew.bat jpackageInput` stages a packaging-only application jar plus every runtime dependency (JavaFX, SQLite JDBC, `org.json`) into `build/jpackage/input/`, ready for a future `jpackage` invocation. This is a completely separate jar from the one `gradlew.bat run`/`build` use for local development.
-- Packaging uses a dedicated **public Mapbox deployment token**, supplied via the `GPS_APP_MAPBOX_DEPLOY_TOKEN` environment variable — never your local `config.properties`, and never committed to Git. The command fails immediately with a clear error if the variable is missing or blank.
+- `gradlew.bat jpackageInput` stages a packaging-only application jar plus every runtime dependency (JavaFX, SQLite JDBC, `org.json`) into `build/jpackage/input/`. This is a completely separate jar from the one `gradlew.bat run`/`build` use for local development.
+- `gradlew.bat jpackageAppImage` builds a runnable, self-contained app (bundled JRE included) to `build/jpackage/app-image/GPS Distance Calculator/`, using the `compass_icon.png`-derived Windows icon at `packaging/compass.ico`.
+- `gradlew.bat jpackageInstaller` builds a Windows `.exe` installer from that app-image to `build/jpackage/installer/`. This step requires the [WiX Toolset](https://wixtoolset.org) (v3.x, `candle.exe`/`light.exe`) installed and on `PATH` — `jpackage` fails with a clear message if it's missing.
+- Packaging uses a dedicated **public Mapbox deployment token**, supplied via the `GPS_APP_MAPBOX_DEPLOY_TOKEN` environment variable — never your local `config.properties`, and never committed to Git. The build fails immediately with a clear error if the variable is missing or blank.
 
 ```bash
 set GPS_APP_MAPBOX_DEPLOY_TOKEN=pk.your_deploy_token_here
 gradlew.bat jpackageInput
+gradlew.bat jpackageAppImage
+gradlew.bat jpackageInstaller
 ```
 
-**Not yet implemented:** `jpackage --type app-image` generation, a Windows application icon, WiX/installer (`.msi`/`.exe`) generation, and smoke testing of the packaged app.
+**Not yet implemented:** installing WiX Toolset in CI/release environments, and end-to-end verification of the installer itself (install → launch → uninstall). The app-image has been smoke-tested successfully by launching the built `.exe` directly.
 
-See CLAUDE.md for the full task dependency flow and credential-handling rules.
+See CLAUDE.md for the full task dependency flow, the JavaFX packaging gotcha it uncovers, and credential-handling rules.
 
 ---
 
