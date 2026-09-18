@@ -87,8 +87,8 @@ public class GpsAppGui extends Application {
         newRouteLayout.setPadding(new Insets(20));
         newRouteLayout.setStyle("-fx-background-color: #D3D3D3; -fx-border-radius: 20; -fx-background-radius: 20;");
 
-        LocationCard card1 = new LocationCard("Location 1", "e.g., Times Square, New York");
-        LocationCard card2 = new LocationCard("Location 2", "e.g., Eiffel Tower, Paris");
+        LocationCard card1 = new LocationCard("Location 1", "e.g., Times Square, New York", false);
+        LocationCard card2 = new LocationCard("Location 2", "e.g., Eiffel Tower, Paris", false);
         List<LocationCard> locationCards = new ArrayList<>(List.of(card1, card2));
         VBox waypointsContainer = new VBox(16, card1.card, card2.card);
 
@@ -150,8 +150,9 @@ public class GpsAppGui extends Application {
         Button addStopBtn = new Button("+ Add Stop");
         addStopBtn.setOnAction(e -> {
             int locationNumber = locationCards.size() + 1;
-            LocationCard newCard = new LocationCard("Location " + locationNumber, "e.g., Denver, CO");
+            LocationCard newCard = new LocationCard("Location " + locationNumber, "e.g., Denver, CO", true);
             wireSearchHandler(newCard, mapbox);
+            wireRemoveHandler(newCard, locationCards, waypointsContainer);
             locationCards.add(newCard);
             waypointsContainer.getChildren().add(newCard.card);
         });
@@ -783,9 +784,10 @@ public class GpsAppGui extends Application {
         final Label resolvedLabel;
         final TextField latField;
         final TextField lonField;
+        final Button removeBtn;
         final VBox card;
 
-        LocationCard(String header, String promptText) {
+        LocationCard(String header, String promptText, boolean removable) {
             headerLabel = new Label(header);
             headerLabel.setStyle("-fx-font-size:13px; -fx-font-weight:bold;");
             addrField = new TextField();
@@ -811,9 +813,20 @@ public class GpsAppGui extends Application {
             latHint.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
             lonHint.setStyle("-fx-font-size:11px; -fx-text-fill:#444;");
             HBox hints = new HBox(16, latHint, lonHint);
+
             card = new VBox(8, headerLabel, addrRow, resolvedLabel, coordRow, hints);
             card.setPadding(new Insets(12));
             card.setStyle("-fx-background-color: #EFEFEF; -fx-background-radius: 8; -fx-border-color: #BBBBBB; -fx-border-radius: 8;");
+
+            if (removable) {
+                removeBtn = new Button("Remove Stop");
+                removeBtn.setStyle("-fx-background-color: #FF4444; -fx-text-fill: white; -fx-font-weight: bold;");
+                HBox removeRow = new HBox(removeBtn);
+                removeRow.setAlignment(Pos.CENTER_RIGHT);
+                card.getChildren().add(removeRow);
+            } else {
+                removeBtn = null;
+            }
         }
     }
 
@@ -855,6 +868,20 @@ public class GpsAppGui extends Application {
             });
             new Thread(searchTask).start();
         });
+    }
+
+    private void wireRemoveHandler(LocationCard card, List<LocationCard> locationCards, VBox waypointsContainer) {
+        card.removeBtn.setOnAction(e -> {
+            locationCards.remove(card);
+            waypointsContainer.getChildren().remove(card.card);
+            renumberLocationCards(locationCards);
+        });
+    }
+
+    private void renumberLocationCards(List<LocationCard> locationCards) {
+        for (int i = 0; i < locationCards.size(); i++) {
+            locationCards.get(i).headerLabel.setText("Location " + (i + 1));
+        }
     }
 
 }
