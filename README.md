@@ -17,6 +17,7 @@ A Java/JavaFX application that calculates distances along multi-waypoint routes,
    - Resolved place name shown below each search field immediately after Search (e.g., `"Search result: Red Rocks Amphitheatre, Morrison, Colorado"`); latitude and longitude fields remain directly editable and are always the source of truth for Calculate
    - Card-based layout groups related controls into distinct visual sections: location inputs, route options, map preview, and route output
    - Click "+ Add Stop" to add additional waypoint cards (Location 3, Location 4, …); each card has its own address search and lat/lon fields
+   - Optional stops (Location 3 and beyond) can be removed individually via a "Remove Stop" button; remaining stops renumber automatically to stay sequential. Location 1 and Location 2 are always present and cannot be removed.
    - Calculate uses all location cards in order; total distance is the sum across all legs
    - Live-updating map preview
    - Saved routes dropdown regenerates the map dynamically; waypoint names are listed in the output card
@@ -163,22 +164,33 @@ build/reports/jacoco/test/html/index.html
 
 ## 🖥️ Packaging (Windows Desktop App)
 
-The app can be packaged as a self-contained Windows desktop application using `jpackage` — no separate Java install required for end users.
+The app is packaged as a self-contained Windows desktop application using `jpackage` — end users need no separate Java install. The full pipeline (staging → app-image → installer) has been built and verified end-to-end, including installing and running the packaged app.
 
-- A pinned Gradle Wrapper (`gradlew.bat`, Gradle 8.10.2) so packaging builds are reproducible on any machine, with no local Gradle install required.
-- `gradlew.bat jpackageInput` stages a packaging-only application jar plus every runtime dependency (JavaFX, SQLite JDBC, `org.json`) into `build/jpackage/input/`. This is a completely separate jar from the one `gradlew.bat run`/`build` use for local development.
-- `gradlew.bat jpackageAppImage` builds a runnable, self-contained app (bundled JRE included) to `build/jpackage/app-image/GPS Distance Calculator/`, using the `compass_icon.png`-derived Windows icon at `packaging/compass.ico`.
-- `gradlew.bat jpackageInstaller` builds a Windows `.exe` installer from that app-image to `build/jpackage/installer/`. This step requires the [WiX Toolset](https://wixtoolset.org) (v3.x, `candle.exe`/`light.exe`) installed and on `PATH` — `jpackage` fails with a clear message if it's missing.
-- Packaging uses a dedicated **public Mapbox deployment token**, supplied via the `GPS_APP_MAPBOX_DEPLOY_TOKEN` environment variable — never your local `config.properties`, and never committed to Git. The build fails immediately with a clear error if the variable is missing or blank.
+### Prerequisites
+
+- The included Gradle Wrapper (`gradlew.bat`, Gradle 8.10.2) — no local Gradle install needed.
+- [WiX Toolset](https://wixtoolset.org) v3.x (`candle.exe`/`light.exe` on `PATH`) — required only for `jpackageInstaller`. Verified working with WiX 3.14.1, whose default install location is `C:\Program Files (x86)\WiX Toolset v3.14\bin` — that folder must be added to `PATH`.
+- A dedicated **public Mapbox deployment token**, set via the `GPS_APP_MAPBOX_DEPLOY_TOKEN` environment variable — never your local dev `config.properties`, and never committed to Git. The build fails immediately with a clear error if it's missing or blank.
+
+### Release commands
+
+Git Bash:
 
 ```bash
-set GPS_APP_MAPBOX_DEPLOY_TOKEN=pk.your_deploy_token_here
-gradlew.bat jpackageInput
-gradlew.bat jpackageAppImage
-gradlew.bat jpackageInstaller
+export GPS_APP_MAPBOX_DEPLOY_TOKEN='pk.your_deploy_token_here'
+gradlew.bat jpackageInput        # stages jar + runtime deps -> build/jpackage/input/
+gradlew.bat jpackageAppImage     # builds self-contained app -> build/jpackage/app-image/GPS Distance Calculator/
+gradlew.bat jpackageInstaller    # builds the installer -> build/jpackage/installer/GPS Distance Calculator-1.0.0.exe
+unset GPS_APP_MAPBOX_DEPLOY_TOKEN
 ```
 
-**Not yet implemented:** installing WiX Toolset in CI/release environments, and end-to-end verification of the installer itself (install → launch → uninstall). The app-image has been smoke-tested successfully by launching the built `.exe` directly.
+Command Prompt equivalent: `set GPS_APP_MAPBOX_DEPLOY_TOKEN=pk.your_deploy_token_here` beforehand, and `set GPS_APP_MAPBOX_DEPLOY_TOKEN=` afterward to clear it.
+
+### Manual smoke test (perform after installing)
+
+Install and launch the built `.exe`, then confirm: app launch, application icon, address/geocoding search, route calculation and map rendering, Add/Remove Stop, route save/load/delete, PNG export, app restart, and SQLite persistence. All of the above have passed manual verification on this pipeline.
+
+**Not yet automated:** there is no CI pipeline producing these artifacts — release commands are run manually on a machine with WiX installed. Only the EXE installer type has been built; MSI was intentionally not pursued.
 
 See CLAUDE.md for the full task dependency flow, the JavaFX packaging gotcha it uncovers, and credential-handling rules.
 

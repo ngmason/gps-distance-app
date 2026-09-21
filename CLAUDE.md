@@ -54,6 +54,8 @@ Both tabs have an **Export as PNG** button (`exportMapAsPng(Image, Window)` in `
 
 Auto-zoom: `calculateZoomLevel(List<Location>)` computes the bounding box of all waypoints and delegates to `calculateZoomLevel(minLat, minLon, maxLat, maxLon)` (shorter span → higher zoom). Duplicate detection compares all waypoints in order and prompts the user to rename or overwrite.
 
+Location 1 and Location 2 are constructed with `removable=false` and never render a Remove control; cards added via **+ Add Stop** are constructed with `removable=true`, which renders a bottom-right **Remove Stop** button. Its handler (`wireRemoveHandler`) removes the card from both `locationCards` and `waypointsContainer`, then calls `renumberLocationCards` to relabel remaining cards sequentially (Location 1, Location 2, …); calculation/validation is unaffected since it already iterates `locationCards` positionally, not by label.
+
 ### Data flow
 
 ```
@@ -117,7 +119,7 @@ Overall testable-core coverage: ~71% lines. Run `gradlew.bat test jacocoTestRepo
 
 ### Packaging (jpackage staging)
 
-Long-term goal: package the app as a self-contained Windows desktop application via `jpackage`. Work completed so far covers only reproducible jar staging — **no app-image or installer yet**.
+The app is packaged as a self-contained Windows desktop application via `jpackage`. The full pipeline — jar staging, app-image, and EXE installer — is implemented and has been verified end-to-end, including installing and manually smoke-testing the packaged app.
 
 #### Task dependency flow
 
@@ -153,15 +155,20 @@ Both produce a file named `gps-distance-app.jar`, but in different directories �
 
 #### Commands
 
-```powershell
-gradlew.bat clean                                        # also wipes build/jpackage/ entirely
-gradlew.bat test                                          # unaffected by packaging infra; no deploy token needed
-gradlew.bat build                                         # unaffected by packaging infra; no deploy token needed
-set GPS_APP_MAPBOX_DEPLOY_TOKEN=pk.your_deploy_token_here
-gradlew.bat jpackageInput                                 # stages build/jpackage/input/; fails clearly if the token is unset/blank
-gradlew.bat jpackageAppImage                              # builds build/jpackage/app-image/GPS Distance Calculator/ (runnable .exe)
-gradlew.bat jpackageInstaller                             # builds build/jpackage/installer/*.exe; requires WiX Toolset on PATH
+Git Bash:
+
+```bash
+gradlew.bat clean                                         # also wipes build/jpackage/ entirely
+gradlew.bat test                                           # unaffected by packaging infra; no deploy token needed
+gradlew.bat build                                           # unaffected by packaging infra; no deploy token needed
+export GPS_APP_MAPBOX_DEPLOY_TOKEN='pk.your_deploy_token_here'
+gradlew.bat jpackageInput                                   # stages build/jpackage/input/; fails clearly if the token is unset/blank
+gradlew.bat jpackageAppImage                                # builds build/jpackage/app-image/GPS Distance Calculator/ (runnable .exe)
+gradlew.bat jpackageInstaller                               # builds build/jpackage/installer/*.exe; requires WiX Toolset on PATH (verified with 3.14.1)
+unset GPS_APP_MAPBOX_DEPLOY_TOKEN
 ```
+
+Command Prompt equivalent for the token: `set GPS_APP_MAPBOX_DEPLOY_TOKEN=pk.your_deploy_token_here` beforehand, `set GPS_APP_MAPBOX_DEPLOY_TOKEN=` afterward to clear it.
 
 #### App-image and installer tasks
 
@@ -177,9 +184,11 @@ jpackageInstaller (Exec)                                 → build/jpackage/inst
   └─ depends on jpackageAppImage
   └─ deletes any previous output dir first
   └─ jpackage --type exe --app-image build/jpackage/app-image/GPS Distance Calculator ...
-  └─ requires the WiX Toolset (candle.exe/light.exe) on PATH — jpackage itself fails with a
-     clear, actionable error ("Can not find WiX tools... download from https://wixtoolset.org")
-     if it's missing, so no custom preflight check was added
+  └─ requires the WiX Toolset (candle.exe/light.exe) on PATH — verified working with WiX 3.14.1
+     (default install location C:\Program Files (x86)\WiX Toolset v3.14\bin, which must be added
+     to PATH), producing build/jpackage/installer/GPS Distance Calculator-1.0.0.exe. jpackage
+     itself fails with a clear, actionable error ("Can not find WiX tools... download from
+     https://wixtoolset.org") if WiX is missing, so no custom preflight check was added.
 ```
 
 App metadata (name `GPS Distance Calculator`, version `1.0.0`, vendor `Nina Mason`) is defined once via `ext { jpackageAppName / jpackageAppVersion / jpackageVendor }` in `build.gradle` and reused by both tasks.
@@ -195,10 +204,16 @@ App metadata (name `GPS Distance Calculator`, version `1.0.0`, vendor `Nina Maso
 
 `$APPDIR` is a jpackage-recognized placeholder resolved at launch to the app's own install directory, where `jpackageInput` already staged every JavaFX jar. This is safe from module-name collisions: the classifier-less JavaFX jars (e.g. `javafx-controls-21.jar`) declare `Automatic-Module-Name: javafx.controlsEmpty` in their manifest — deliberately distinct from the real `javafx.controls` module in the `-win` jar — specifically so both can coexist on one module-path without conflict. Confirmed by launching the built `.exe` directly: without the fix it exits immediately with the JavaFX error; with the fix the JVM starts, the GUI thread runs, and (with a placeholder token) it gets as far as a live Mapbox HTTP call before failing on a 401 — proving the classpath, native runtime, icon, and app metadata are all wired correctly end-to-end.
 
-#### Not yet implemented
+#### Release verification (2026-09-21)
 
-- WiX Toolset is not installed in this dev environment, so `jpackageInstaller` has not been run to a successful `.exe` — only confirmed to fail with jpackage's own clear error message. Installing WiX (https://wixtoolset.org, v3.x, `candle.exe`/`light.exe` on PATH) is an external environment prerequisite, not something a commit can provide.
-- End-to-end smoke testing of the **installer** itself (install → launch → uninstall) — blocked on the WiX gap above. The **app-image** (pre-installer) has been smoke-tested successfully (see above).
+The full pipeline was run end-to-end with WiX Toolset 3.14.1 installed and confirmed working:
+
+- `jpackageInstaller` successfully produced `build/jpackage/installer/GPS Distance Calculator-1.0.0.exe`.
+- The installer was run and the installed app was manually smoke-tested. All of the following passed: app launch, application icon rendering, address/geocoding search, route calculation and map rendering, Add/Remove Stop, route save/load/delete, PNG export, app restart, and SQLite persistence (`%LOCALAPPDATA%\GpsApp\routes.db`).
+
+#### Not yet automated
+
+- There is no CI pipeline producing these artifacts — the release commands are run manually on a developer machine with WiX installed.
 - MSI packaging was considered and intentionally not built — EXE was chosen as the sole installer type for this phase.
 
 #### Guidance for future contributors
